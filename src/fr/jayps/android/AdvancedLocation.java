@@ -17,6 +17,9 @@ public class AdvancedLocation {
     protected float _minAccuracy = 10;   // in m
     protected float _minAccuracyIni = _minAccuracy;
     
+    // max value for _minAccuracy
+    protected float _maxMinAccuracy = 50;   // in m
+    
     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
     protected float _minAccuracyForAltitudeChangeLevel1 = 4; // in m
     protected float _minAltitudeChangeLevel1 = 10; // in m
@@ -116,11 +119,20 @@ public class AdvancedLocation {
         if (location.getAccuracy() > _minAccuracy) {
             _nbBadAccuracyLocations++;
             if (_nbBadAccuracyLocations > 10) {
+                float _prevMinAccuracy = _minAccuracy;
                 
                 _minAccuracy = (float) Math.floor(1.5f * _minAccuracy);
-                _nbBadAccuracyLocations = 0;
                 
-                Logger("accuracy to often above _minAccuracy, augment _minAccuracy to " + _minAccuracy,  LoggerType.TOAST);
+                if (_minAccuracy > _maxMinAccuracy) {
+                    // max value for _minAccuracy
+                    _minAccuracy = _maxMinAccuracy;
+                }
+                
+                if (_minAccuracy != _prevMinAccuracy) {
+                    _nbBadAccuracyLocations = 0;
+                
+                    Logger("Accuracy to often above _minAccuracy, augment _minAccuracy to " + _minAccuracy,  LoggerType.TOAST);
+                }
             }
         }
 
@@ -130,10 +142,17 @@ public class AdvancedLocation {
                 firstGoodLocation = location;
             }  
             
-            if ((location.getAccuracy() <= _minAccuracyIni) && (_minAccuracy > _minAccuracyIni)) {
-                _minAccuracy = _minAccuracyIni;
-
-                Logger("_minAccuracy returns to initial value: " + _minAccuracy, LoggerType.TOAST);
+            if (location.getAccuracy() <= (_minAccuracy / 1.5f)) {
+                float _prevMinAccuracy = _minAccuracy;
+                
+                _minAccuracy = (float) Math.floor(_minAccuracy / 1.5f);
+                
+                if (_minAccuracy < _minAccuracyIni) {
+                    _minAccuracy = _minAccuracyIni;
+                }
+                if (_minAccuracy != _prevMinAccuracy) {
+                    Logger("Accuracy below _minAccuracy, decrease it to: " + _minAccuracy, LoggerType.TOAST);
+                }
             }
         
             float localAverageSpeed = (float) deltaDistance / ((float) deltaTime / 1000f); // in m/s

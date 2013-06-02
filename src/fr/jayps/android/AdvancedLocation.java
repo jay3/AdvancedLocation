@@ -17,11 +17,11 @@ public class AdvancedLocation {
         }
     }
 
-    public LocationWithExtraFields lastLocation = null;            // last received location
-    public LocationWithExtraFields lastGoodLocation = null;        // last location with accuracy below _minAccuracy
-    public LocationWithExtraFields lastGoodAscentLocation = null;  // last location with changed ascent
-    public LocationWithExtraFields firstLocation = null;           // first received location
-    public LocationWithExtraFields firstGoodLocation = null;       // first location with accuracy below _minAccuracy
+    protected LocationWithExtraFields lastLocation = null;            // last received location
+    protected LocationWithExtraFields lastGoodLocation = null;        // last location with accuracy below _minAccuracy
+    protected LocationWithExtraFields lastGoodAscentLocation = null;  // last location with changed ascent
+    protected LocationWithExtraFields firstLocation = null;           // first received location
+    protected LocationWithExtraFields firstGoodLocation = null;       // first location with accuracy below _minAccuracy
     
     protected float _minAccuracy = 10;   // in m
     protected float _minAccuracyIni = _minAccuracy;

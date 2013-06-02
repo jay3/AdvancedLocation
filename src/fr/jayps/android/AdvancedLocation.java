@@ -7,12 +7,21 @@ import android.widget.Toast;
 
 public class AdvancedLocation {
     private static final String TAG = "AdvancedLocation";
+    
+    protected class LocationWithExtraFields extends Location {
 
-    public Location lastLocation = null;            // last received location
-    public Location lastGoodLocation = null;        // last location with accuracy below _minAccuracy
-    public Location lastGoodAscentLocation = null;  // last location with changed ascent
-    public Location firstLocation = null;           // first received location
-    public Location firstGoodLocation = null;       // first location with accuracy below _minAccuracy
+        public float distance = 0; // in m
+        public LocationWithExtraFields(Location l) {
+            super(l);
+            this.distance = _distance;
+        }
+    }
+
+    public LocationWithExtraFields lastLocation = null;            // last received location
+    public LocationWithExtraFields lastGoodLocation = null;        // last location with accuracy below _minAccuracy
+    public LocationWithExtraFields lastGoodAscentLocation = null;  // last location with changed ascent
+    public LocationWithExtraFields firstLocation = null;           // first received location
+    public LocationWithExtraFields firstGoodLocation = null;       // first location with accuracy below _minAccuracy
     
     protected float _minAccuracy = 10;   // in m
     protected float _minAccuracyIni = _minAccuracy;
@@ -43,7 +52,10 @@ public class AdvancedLocation {
     protected double _ascent = 0; // in m
     protected long _elapsedTime = 0; // in ms
 
-    float _averageSpeed = 0; // in m/s
+    protected float _averageSpeed = 0; // in m/s
+    protected float _ascentRate = 0; // in m/s
+    
+    protected float _slope = 0; // in %
 
     
 
@@ -92,7 +104,13 @@ public class AdvancedLocation {
     }    
     public double getAscent() {
         return _ascent;
-    }    
+    }
+    public float getAscentRate() {
+        return _ascentRate;
+    }
+    public float getSlope() {
+        return _slope;
+    }
 
     public void onLocationChanged(Location location) {
         long deltaTime = 0;
@@ -104,7 +122,7 @@ public class AdvancedLocation {
         
         if (firstLocation == null) {
             // 1st location
-            firstLocation = lastLocation = location;
+            firstLocation = lastLocation = new LocationWithExtraFields(location);
         }
 
         deltaTime = location.getTime() - lastLocation.getTime();
@@ -139,7 +157,7 @@ public class AdvancedLocation {
         if (location.getAccuracy() <= _minAccuracy) {
 
             if (firstGoodLocation == null) {
-                firstGoodLocation = location;
+                firstGoodLocation = new LocationWithExtraFields(location);
             }  
             
             if (location.getAccuracy() <= (_minAccuracy / 1.5f)) {
@@ -167,7 +185,7 @@ public class AdvancedLocation {
             ) {
 
                 if (lastGoodAscentLocation == null) {
-                    lastGoodAscentLocation = location;
+                    lastGoodAscentLocation = new LocationWithExtraFields(location);
                 }
 
                 if (lastGoodAscentLocation != null && (
@@ -181,9 +199,22 @@ public class AdvancedLocation {
                     // compute ascent
                     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
                     deltaAscent = Math.floor(location.getAltitude() - lastGoodAscentLocation.getAltitude());
-                    Logger("alt:" + lastGoodAscentLocation.getAltitude() + "->" + location.getAltitude() + ":" + deltaAscent + " - acc: " + location.getAccuracy());
                     
-                    lastGoodAscentLocation = location;
+                    long tmpDeltaTime = location.getTime() - lastGoodAscentLocation.getTime();
+                    float tmpDeltaDistance = _distance - lastGoodAscentLocation.distance;
+                    
+                    _ascentRate = (float) deltaAscent / (tmpDeltaTime) * 1000; // m/s
+                    
+                    if (tmpDeltaDistance != 0) {
+                        _slope = (float) deltaAscent / tmpDeltaDistance; // in %
+                    } else {
+                        _slope = 0;
+                    }
+                    
+                    Logger("alt:" + lastGoodAscentLocation.getAltitude() + "->" + location.getAltitude() + ":" + deltaAscent + " - acc: " + location.getAccuracy());
+                    Logger("_ascentRate:" + _ascentRate + " _slope:" + _slope);
+                    
+                    lastGoodAscentLocation = new LocationWithExtraFields(location);
                 }
 
                 _elapsedTime += deltaTime;
@@ -215,11 +246,11 @@ public class AdvancedLocation {
                 
             } // additional conditions to compute statistics
             
-            lastGoodLocation = location;
+            lastGoodLocation = new LocationWithExtraFields(location);
             
         } // if (location.getAccuracy() <= _minAccuracy) {
         
-        lastLocation = location;
+        lastLocation = new LocationWithExtraFields(location);
     }
     
     // log functions

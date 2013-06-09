@@ -20,6 +20,7 @@ public class AdvancedLocation {
     protected LocationWithExtraFields lastLocation = null;            // last received location
     protected LocationWithExtraFields lastGoodLocation = null;        // last location with accuracy below _minAccuracy
     protected LocationWithExtraFields lastGoodAscentLocation = null;  // last location with changed ascent
+    protected LocationWithExtraFields lastGoodAscentRateLocation = null;  // last location with changed ascentRate
     protected LocationWithExtraFields firstLocation = null;           // first received location
     protected LocationWithExtraFields firstGoodLocation = null;       // first location with accuracy below _minAccuracy
     
@@ -36,6 +37,7 @@ public class AdvancedLocation {
     protected float _minAltitudeChangeLevel2 = 20; // in m
     protected float _minAccuracyForAltitudeChangeLevel3 = 15; // in m
     protected float _minAltitudeChangeLevel3 = 50; // in m
+    protected long _minTimeBetweenAscentRateChange = 120*1000; // in ms
 
     protected long _minDeltaTimeToSaveLocation = 3000; // in ms
     protected float _minDeltaDistanceToSaveLocation = 20;   // in m
@@ -204,6 +206,7 @@ public class AdvancedLocation {
 
                 if (lastGoodAscentLocation == null) {
                     lastGoodAscentLocation = new LocationWithExtraFields(location);
+                    lastGoodAscentRateLocation = new LocationWithExtraFields(location);
                 }
 
                 if (lastGoodAscentLocation != null && (
@@ -214,25 +217,39 @@ public class AdvancedLocation {
                     ((Math.abs(location.getAltitude() - lastGoodAscentLocation.getAltitude()) >= _minAltitudeChangeLevel3) && (location.getAccuracy() <= _minAccuracyForAltitudeChangeLevel3))
 
                 )) {
+                    
                     // compute ascent
                     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
                     deltaAscent = Math.floor(location.getAltitude() - lastGoodAscentLocation.getAltitude());
                     
-                    long tmpDeltaTime = location.getTime() - lastGoodAscentLocation.getTime();
-                    float tmpDeltaDistance = _distance - lastGoodAscentLocation.distance;
-                    
-                    _ascentRate = (float) deltaAscent / (tmpDeltaTime) * 1000; // m/s
-                    
-                    if (tmpDeltaDistance != 0) {
-                        _slope = (float) deltaAscent / tmpDeltaDistance; // in %
-                    } else {
-                        _slope = 0;
-                    }
-                    
                     Logger("alt:" + lastGoodAscentLocation.getAltitude() + "->" + location.getAltitude() + ":" + deltaAscent + " - acc: " + location.getAccuracy());
-                    Logger("_ascentRate:" + _ascentRate + " _slope:" + _slope);
                     
                     lastGoodAscentLocation = new LocationWithExtraFields(location);
+
+                    // try to compute ascentRate if enough time has elapsed
+                    long tmpDeltaTime = location.getTime() - lastGoodAscentRateLocation.getTime();
+                    
+                    if (tmpDeltaTime < _minTimeBetweenAscentRateChange) {
+                        // not enough time since lastGoodAscentRateLocation to compute ascentRate and slope
+                        Logger("tmpDeltaTime:" + tmpDeltaTime +"<"+ _minTimeBetweenAscentRateChange + " ascentRate skip");
+                    } else {
+                        
+                        double tmpDeltaAscent = Math.floor(location.getAltitude() - lastGoodAscentRateLocation.getAltitude());
+                        float tmpDeltaDistance = _distance - lastGoodAscentRateLocation.distance;
+                        
+                        _ascentRate = (float) tmpDeltaAscent / (tmpDeltaTime) * 1000; // m/s
+                        
+                        if (tmpDeltaDistance != 0) {
+                            _slope = (float) tmpDeltaAscent / tmpDeltaDistance; // in %
+                        } else {
+                            _slope = 0;
+                        }
+                        
+                        Logger("alt:" + lastGoodAscentRateLocation.getAltitude() + "->" + location.getAltitude() + ":" + tmpDeltaAscent + " _ascentRate:" + _ascentRate + " _slope:" + _slope);
+                        
+                        lastGoodAscentRateLocation = new LocationWithExtraFields(location);
+                    }
+                    
                 }
 
                 _elapsedTime += deltaTime;

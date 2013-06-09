@@ -66,8 +66,8 @@ public class AdvancedLocation {
     public AdvancedLocation(Context context) {
         this._context = context;
     }
-
     
+    // getters
     public double getAltitude() {
         if (lastGoodLocation != null) {
             return lastGoodLocation.getAltitude();
@@ -110,6 +110,20 @@ public class AdvancedLocation {
     }
     public float getSlope() {
         return _slope;
+    }
+    
+    // setters
+    public void setAverageSpeed(float averageSpeed) {
+        this._averageSpeed = averageSpeed;
+    }
+    public void setElapsedTime(long elapsedTime) {
+        this._elapsedTime = elapsedTime;
+    }
+    public void setDistance(float distance) {
+        this._distance = distance;
+    }    
+    public void setAscent(double ascent) {
+        this._ascent = ascent;
     }
 
     public void onLocationChanged(Location location) {

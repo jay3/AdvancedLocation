@@ -56,6 +56,10 @@ public class AdvancedLocation {
     protected float _ascentRate = 0; // in m/s
     
     protected float _slope = 0; // in %
+    
+    // debug levels
+    public int debugLevel = 0;
+    public int debugLevelToast = 0;
 
     
 
@@ -268,18 +272,32 @@ public class AdvancedLocation {
     }
     
     // log functions
+    
+    private enum LoggerType { LOG, TOAST };
+    
     public void Logger(String s) {
-        Logger(s, LoggerType.LOG);
+        Logger(s, 1, LoggerType.LOG);
     }
-    private enum LoggerType { LOG, TOAST };  
     public void Logger(String s, LoggerType type) {
+        Logger(s, 1, type);
+    }
+    public void Logger(String s, int level) {
+        Logger(s, level, LoggerType.LOG);
+    }
+    public void Logger(String s, int level, LoggerType type) {
         if (type == LoggerType.TOAST) {
-            if (this._context != null) {
-                Toast.makeText(this._context, s, Toast.LENGTH_LONG).show();
+            if (this.debugLevelToast >= level) {
+                if (this._context != null) {
+                    Toast.makeText(this._context, s, Toast.LENGTH_LONG).show();
+                }
             }
-            Log.v("JayPS-" + TAG, s);
-        } else {            
-            Log.v("JayPS-" + TAG, s);
+            if (this.debugLevel >= level) {
+                Log.v("JayPS-" + TAG + ":" + level, s);
+            }
+        } else {
+            if (this.debugLevel >= level) {
+                Log.v("JayPS-" + TAG + ":" + level, s);
+            }
         }
     }
 }

@@ -33,11 +33,11 @@ public class AdvancedLocation {
     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
     protected float _minAccuracyForAltitudeChangeLevel1 = 4; // in m
     protected float _minAltitudeChangeLevel1 = 10; // in m
-    protected float _minAccuracyForAltitudeChangeLevel2 = 8; // in m
+    protected float _minAccuracyForAltitudeChangeLevel2 = 7; // in m
     protected float _minAltitudeChangeLevel2 = 20; // in m
-    protected float _minAccuracyForAltitudeChangeLevel3 = 15; // in m
+    protected float _minAccuracyForAltitudeChangeLevel3 = 12; // in m
     protected float _minAltitudeChangeLevel3 = 50; // in m
-    protected long _minTimeBetweenAscentRateChange = 120*1000; // in ms
+    protected long _minDeltaTimeForAscentRate = 120*1000; // in ms
 
     protected long _minDeltaTimeToSaveLocation = 3000; // in ms
     protected float _minDeltaDistanceToSaveLocation = 20;   // in m
@@ -229,9 +229,9 @@ public class AdvancedLocation {
                     // try to compute ascentRate if enough time has elapsed
                     long tmpDeltaTime = location.getTime() - lastGoodAscentRateLocation.getTime();
                     
-                    if (tmpDeltaTime < _minTimeBetweenAscentRateChange) {
+                    if (tmpDeltaTime < _minDeltaTimeForAscentRate) {
                         // not enough time since lastGoodAscentRateLocation to compute ascentRate and slope
-                        Logger("tmpDeltaTime:" + tmpDeltaTime +"<"+ _minTimeBetweenAscentRateChange + " ascentRate skip");
+                        Logger("tmpDeltaTime:" + tmpDeltaTime +"<"+ _minDeltaTimeForAscentRate + " ascentRate skip");
                     } else {
                         
                         double tmpDeltaAscent = Math.floor(location.getAltitude() - lastGoodAscentRateLocation.getAltitude());

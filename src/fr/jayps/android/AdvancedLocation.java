@@ -100,6 +100,10 @@ public class AdvancedLocation {
         return 0.0f;
     }
     public float getAverageSpeed() {
+        if ((_averageSpeed == 0) && (_elapsedTime > 0)) {
+            // not yet calculated yet?
+            _averageSpeed = (float) _distance / ((float) _elapsedTime / 1000f);
+        }
         return _averageSpeed;
     }
     public long getElapsedTime() {
@@ -119,9 +123,6 @@ public class AdvancedLocation {
     }
     
     // setters
-    public void setAverageSpeed(float averageSpeed) {
-        this._averageSpeed = averageSpeed;
-    }
     public void setElapsedTime(long elapsedTime) {
         this._elapsedTime = elapsedTime;
     }

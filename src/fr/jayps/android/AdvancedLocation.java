@@ -141,20 +141,6 @@ public class AdvancedLocation {
         nbOnLocationChanged++;
         Logger("onLocationChanged: " +nbGoodLocations+"/"+nbOnLocationChanged+" Alt:"+ location.getAltitude() + "m-" + location.getAccuracy() + "m " + location.getLatitude() + "-" + location.getLongitude());
         
-        if (firstLocation == null) {
-            // 1st location
-            firstLocation = lastLocation = new LocationWithExtraFields(location);
-        }
-
-        deltaTime = location.getTime() - lastLocation.getTime();
-    
-        if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 1000)) {
-            // less than 1000ms, skip this location
-            return;
-        }
-        
-        deltaDistance = location.distanceTo(lastLocation);
-
         if (location.getAccuracy() > _minAccuracy) {
             _nbBadAccuracyLocations++;
             if (_nbBadAccuracyLocations > 10) {
@@ -174,6 +160,20 @@ public class AdvancedLocation {
                 }
             }
         }
+
+        if (firstLocation == null) {
+            // 1st location
+            firstLocation = lastLocation = new LocationWithExtraFields(location);
+        }
+
+        deltaTime = location.getTime() - lastLocation.getTime();
+    
+        if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 1000)) {
+            // less than 1000ms, skip this location
+            return;
+        }
+        
+        deltaDistance = location.distanceTo(lastLocation);
 
         if (location.getAccuracy() <= _minAccuracy) {
 

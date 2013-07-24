@@ -109,6 +109,12 @@ public class AdvancedLocation {
     public long getElapsedTime() {
         return _elapsedTime;
     }
+    public long getTime() {
+        if (lastLocation != null) {
+            return lastLocation.getTime();
+        }
+        return 0;
+    }     
     public float getDistance() {
         return _distance;
     }    

@@ -31,9 +31,9 @@ public class AdvancedLocation {
     protected float _maxMinAccuracy = 50;   // in m
     
     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
-    protected float _minAccuracyForAltitudeChangeLevel1 = 4; // in m
+    protected float _minAccuracyForAltitudeChangeLevel1 = 3; // in m
     protected float _minAltitudeChangeLevel1 = 10; // in m
-    protected float _minAccuracyForAltitudeChangeLevel2 = 7; // in m
+    protected float _minAccuracyForAltitudeChangeLevel2 = 6; // in m
     protected float _minAltitudeChangeLevel2 = 20; // in m
     protected float _minAccuracyForAltitudeChangeLevel3 = 12; // in m
     protected float _minAltitudeChangeLevel3 = 50; // in m

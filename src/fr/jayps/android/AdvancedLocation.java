@@ -62,6 +62,7 @@ public class AdvancedLocation {
     // debug levels
     public int debugLevel = 0;
     public int debugLevelToast = 0;
+    public String debugTagPrefix = "";
 
     
 
@@ -316,11 +317,11 @@ public class AdvancedLocation {
                 }
             }
             if (this.debugLevel >= level) {
-                Log.v("JayPS-" + TAG + ":" + level, s);
+                Log.v(this.debugTagPrefix + TAG + ":" + level, s);
             }
         } else {
             if (this.debugLevel >= level) {
-                Log.v("JayPS-" + TAG + ":" + level, s);
+                Log.v(this.debugTagPrefix + TAG + ":" + level, s);
             }
         }
     }

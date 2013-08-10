@@ -63,8 +63,11 @@ public class AdvancedLocation {
     public int debugLevel = 0;
     public int debugLevelToast = 0;
     public String debugTagPrefix = "";
-
     
+    // constantes
+    public static final int SKIPPED = 0x0;
+    public static final int NORMAL = 0x1;
+    public static final int SAVED = 0x2;
 
     protected Context _context = null;
     public AdvancedLocation() {
@@ -89,14 +92,14 @@ public class AdvancedLocation {
     }
 
     public float getAccuracy() {
-        if (lastLocation != null) {
-            return lastLocation.getAccuracy();
+        if (currentLocation != null) {
+            return currentLocation.getAccuracy();
         }
         return 0.0f;
     }    
     public float getSpeed() {
-        if (lastLocation != null) {
-            return lastLocation.getSpeed();
+        if (currentLocation != null) {
+            return currentLocation.getSpeed();
         }
         return 0.0f;
     }
@@ -111,8 +114,8 @@ public class AdvancedLocation {
         return _elapsedTime;
     }
     public long getTime() {
-        if (lastLocation != null) {
-            return lastLocation.getTime();
+        if (currentLocation != null) {
+            return currentLocation.getTime();
         }
         return 0;
     }     
@@ -128,6 +131,57 @@ public class AdvancedLocation {
     public float getSlope() {
         return _slope;
     }
+    public boolean hasBearing() {
+        if (currentLocation != null) {
+            return currentLocation.hasBearing();
+        }
+        return false;
+    }    
+    public float getBearing() {
+        if (currentLocation != null) {
+            return currentLocation.getBearing();
+        }
+        return 0;
+    }
+    public String getBearingText() {
+        if (currentLocation != null) {
+        	// getBearing() is guaranteed to be in the range (0.0, 360.0] if the device has a bearing.
+        	return bearingText(currentLocation.getBearing());
+        }
+        return "";
+    }
+    public static String bearingText(float bearing) {
+	    String bearingText = "";
+	    
+	    if (bearing >= 0 && bearing < 22.5) {
+	        bearingText = "N";
+	    }
+	    if (bearing >= 22.5 && bearing < 67.5) {
+	        bearingText = "NE";
+	    }
+	    if (bearing >= 67.5 && bearing < 112.5) {
+	        bearingText = "E";
+	    }
+	    if (bearing >= 112.5 && bearing < 157.5) {
+	        bearingText = "SE";
+	    }
+	    if (bearing >= 157.5 && bearing < 202.5) {
+	        bearingText = "S";
+	    }
+	    if (bearing >= 202.5 && bearing < 247.5) {
+	        bearingText = "SW";
+	    }
+	    if (bearing >= 247.5 && bearing < 292.5) {
+	        bearingText = "W";
+	    }
+	    if (bearing >= 292.5 && bearing < 337.5) {
+	        bearingText = "NW";
+	    }
+	    if (bearing >= 337.5 && bearing < 360) {
+	        bearingText = "N";
+	    }            
+	    return bearingText;
+	}
     
     // setters
     public void setElapsedTime(long elapsedTime) {
@@ -140,7 +194,8 @@ public class AdvancedLocation {
         this._ascent = ascent;
     }
 
-    public void onLocationChanged(Location location) {
+    public int onLocationChanged(Location location) {
+    	int returnValue = NORMAL;
         long deltaTime = 0;
         float deltaDistance = 0;
         double deltaAscent = 0;
@@ -179,7 +234,7 @@ public class AdvancedLocation {
     
         if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 1000)) {
             // less than 1000ms, skip this location
-            return;
+            return SKIPPED;
         }
 
         deltaDistance = location.distanceTo(lastLocation);
@@ -308,7 +363,7 @@ public class AdvancedLocation {
                     // this Location could be saved
                     //Logger("save Location");
 
-                    // TODO
+                    returnValue = SAVED;
                 }
                 
             } // additional conditions to compute statistics
@@ -318,6 +373,8 @@ public class AdvancedLocation {
         } // if (currentLocation.getAccuracy() <= _minAccuracy) {
         
         lastLocation = currentLocation;
+        
+        return returnValue;
     }
 
     private boolean _testFlatSection(LocationWithExtraFields l1, LocationWithExtraFields l2) {

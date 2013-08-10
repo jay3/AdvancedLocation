@@ -144,6 +144,8 @@ public class AdvancedLocation {
         long deltaTime = 0;
         float deltaDistance = 0;
         double deltaAscent = 0;
+        double deltaAltitude = 0;
+        float deltaAccuracy = 0;
 
         nbOnLocationChanged++;
         Logger("onLocationChanged: " +nbGoodLocations+"/"+nbOnLocationChanged+" Alt:"+ location.getAltitude() + "m-" + location.getAccuracy() + "m " + location.getLatitude() + "-" + location.getLongitude());
@@ -216,21 +218,34 @@ public class AdvancedLocation {
                     lastGoodAscentLocation = new LocationWithExtraFields(location);
                     lastGoodAscentRateLocation = new LocationWithExtraFields(location);
                 }
+                deltaAltitude = location.getAltitude() - lastGoodAscentLocation.getAltitude();
+                deltaAccuracy = location.getAccuracy() - lastGoodAscentLocation.getAccuracy();
+                
+                if (deltaAltitude < 0 && deltaAccuracy <= -3) {
+                	// Goal: during a "climb", if altitude decreases and accuracy is better, update lastGoodAscentLocation
+                	// it will avoid use of previously "wrong" (too high) lastGoodAscentLocation with lesser accuracy to compute ascent
+                	Logger("altitude decreases and accuracy is better (it decreases of at least 3m), use this position as lastGoodAscentLocation");
+                	lastGoodAscentLocation = new LocationWithExtraFields(location);
+                	lastGoodAscentRateLocation = new LocationWithExtraFields(location);
+                	deltaAltitude = 0;
+                	deltaAccuracy = 0;
+                }
 
+                float worstAccuracy = Math.max(lastGoodAscentLocation.getAccuracy(), location.getAccuracy());
                 if (lastGoodAscentLocation != null && (
-                    ((Math.abs(location.getAltitude() - lastGoodAscentLocation.getAltitude()) >= _minAltitudeChangeLevel1) && (location.getAccuracy() <= _minAccuracyForAltitudeChangeLevel1))
+                    ((Math.abs(deltaAltitude) >= _minAltitudeChangeLevel1) && (worstAccuracy <= _minAccuracyForAltitudeChangeLevel1))
                         ||
-                    ((Math.abs(location.getAltitude() - lastGoodAscentLocation.getAltitude()) >= _minAltitudeChangeLevel2) && (location.getAccuracy() <= _minAccuracyForAltitudeChangeLevel2))
+                    ((Math.abs(deltaAltitude) >= _minAltitudeChangeLevel2) && (worstAccuracy <= _minAccuracyForAltitudeChangeLevel2))
                         ||
-                    ((Math.abs(location.getAltitude() - lastGoodAscentLocation.getAltitude()) >= _minAltitudeChangeLevel3) && (location.getAccuracy() <= _minAccuracyForAltitudeChangeLevel3))
+                    ((Math.abs(deltaAltitude) >= _minAltitudeChangeLevel3) && (worstAccuracy <= _minAccuracyForAltitudeChangeLevel3))
 
                 )) {
                     
                     // compute ascent
                     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
-                    deltaAscent = Math.floor(location.getAltitude() - lastGoodAscentLocation.getAltitude());
+                	deltaAscent = Math.floor(deltaAltitude);
                     
-                    Logger("alt:" + lastGoodAscentLocation.getAltitude() + "->" + location.getAltitude() + ":" + deltaAscent + " - acc: " + location.getAccuracy());
+                    Logger("alt:" + lastGoodAscentLocation.getAltitude() + "->" + location.getAltitude() + ":" + deltaAltitude + " - acc: " + worstAccuracy);
                     
                     lastGoodAscentLocation = new LocationWithExtraFields(location);
 

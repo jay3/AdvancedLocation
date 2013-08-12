@@ -152,8 +152,11 @@ public class AdvancedLocation {
     }
     public static String bearingText(float bearing) {
 	    String bearingText = "";
-	    
+
 	    bearing = bearing % 360;
+        if (bearing < 0) {
+            bearing += 360;
+        }
 	    
 	    if (bearing >= 0 && bearing < 22.5) {
 	        bearingText = "N";

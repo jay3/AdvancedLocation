@@ -21,8 +21,6 @@ public class AdvancedLocation {
     protected LocationWithExtraFields lastGoodLocation = null;        // last location with accuracy below _minAccuracy
     protected LocationWithExtraFields lastGoodAscentLocation = null;  // last location with changed ascent
     protected LocationWithExtraFields lastGoodAscentRateLocation = null;  // last location with changed ascentRate
-    protected LocationWithExtraFields firstLocation = null;           // first received location
-    protected LocationWithExtraFields firstGoodLocation = null;       // first location with accuracy below _minAccuracy
     protected LocationWithExtraFields lastSavedLocation = null;       // last saved location
     
     static final float _minAccuracyIni = 10; // in m
@@ -205,10 +203,17 @@ public class AdvancedLocation {
         double deltaAscent = 0;
         double deltaAltitude = 0;
         float deltaAccuracy = 0;
+        boolean isFirstLocation = false;
 
         nbOnLocationChanged++;
         Logger("onLocationChanged: " +nbGoodLocations+"/"+nbOnLocationChanged+" Alt:"+ location.getAltitude() + "m-" + location.getAccuracy() + "m " + location.getLatitude() + "-" + location.getLongitude());
-        
+
+        if (lastLocation == null) {
+            // save 1st location for next call to onLocationChanged()
+        	lastLocation = new LocationWithExtraFields(location);
+        	isFirstLocation = true;
+        }
+
         if (location.getAccuracy() > _minAccuracy) {
             _nbBadAccuracyLocations++;
             if (_nbBadAccuracyLocations > 10) {
@@ -229,31 +234,20 @@ public class AdvancedLocation {
             }
         }
 
-        if (firstLocation == null) {
-            // 1st location
-            firstLocation = lastLocation = new LocationWithExtraFields(location);
-        }
-
-        deltaTime = location.getTime() - lastLocation.getTime();
-    
         if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 1000)) {
             // less than 1000ms, skip this location
             return SKIPPED;
         }
-
+        
+        deltaTime = location.getTime() - lastLocation.getTime();
         deltaDistance = location.distanceTo(lastLocation);
         _elapsedTime += deltaTime;
         _distance += deltaDistance;
         _averageSpeed = (float) _distance / ((float) _elapsedTime / 1000f);
         currentLocation = new LocationWithExtraFields(location);
         
-
         if (currentLocation.getAccuracy() <= _minAccuracy) {
 
-            if (firstGoodLocation == null) {
-                firstGoodLocation = currentLocation;
-            }  
-            
             if (currentLocation.getAccuracy() <= (_minAccuracy / 1.5f)) {
                 float _prevMinAccuracy = _minAccuracy;
                 
@@ -273,7 +267,7 @@ public class AdvancedLocation {
             
             // additional conditions to compute statistics
             if (
-                  (_distance == 0) // 1st location
+                  isFirstLocation
                 ||
                   (localAverageSpeed > _minSpeedToComputeStats)
             ) {
@@ -420,7 +414,7 @@ public class AdvancedLocation {
     
     private boolean _testLocationOKForSave() {
 	    if (
-	          (lastSavedLocation == null) // 1st location
+	          (lastSavedLocation == null) // 1st saved location
 	        ||
 	          (currentLocation.getTime() - lastSavedLocation.getTime() >= _minDeltaTimeToSaveLocation)
 	        ||

@@ -401,8 +401,8 @@ public class AdvancedLocation {
 	    } else if ((Math.abs(deltaAltitude) >= _minAltitudeChangeLevel3) && (worstAccuracy <= _minAccuracyForAltitudeChangeLevel3)) {
 	    	Logger("abs(deltaAltitude):" + Math.abs(deltaAltitude) + ">=" + _minAltitudeChangeLevel3 + " & worstAccuracy:" + worstAccuracy + "<=" + _minAccuracyForAltitudeChangeLevel3);
 	    	result = true;
-	    } else if (Math.abs(deltaAltitude) >= 4 * Math.abs(deltaAccuracy)) {
-	    	Logger("abs(deltaAltitude):" + Math.abs(deltaAltitude) + ">= 4 * abs(deltaAccuracy): 4*" + Math.abs(deltaAccuracy));
+	    } else if (Math.abs(deltaAltitude) >= 4 * worstAccuracy) {
+	    	Logger("abs(deltaAltitude):" + Math.abs(deltaAltitude) + ">=4*worstAccuracy: 4*" + worstAccuracy);
 	    	result = true;
 	    }
 	    if (result) {

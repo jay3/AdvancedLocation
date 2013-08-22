@@ -20,6 +20,7 @@ public class AdvancedLocation {
     protected LocationWithExtraFields lastLocation = null;            // last received location
     protected LocationWithExtraFields lastGoodLocation = null;        // last location with accuracy below _minAccuracy
     protected LocationWithExtraFields lastGoodAscentLocation = null;  // last location with changed ascent
+    protected LocationWithExtraFields lastGoodAscentLocation2 = null; // other previous location with changed ascent, older and with better accuracy than lastGoodAscentLocation
     protected LocationWithExtraFields lastGoodAscentRateLocation = null;  // last location with changed ascentRate
     protected LocationWithExtraFields lastSavedLocation = null;       // last saved location
     
@@ -277,6 +278,7 @@ public class AdvancedLocation {
 
                 if (lastGoodAscentLocation == null) {
                     lastGoodAscentLocation = currentLocation;
+                    lastGoodAscentLocation2 = currentLocation;
                     lastGoodAscentRateLocation = currentLocation;
                 }
                 
@@ -290,7 +292,12 @@ public class AdvancedLocation {
                 	lastGoodAscentLocation = currentLocation;
                 	lastGoodAscentRateLocation = currentLocation;
                 	deltaAltitude = 0;
-                	deltaAccuracy = 0;
+                }
+                
+                if (Math.abs(deltaAltitude) < 0.5 && deltaAccuracy < 0) {
+                    Logger("flat section, and better accuracy, reset lastGoodAscentLocation", 2);
+                    lastGoodAscentLocation = currentLocation;
+                    deltaAltitude = 0;
                 }
                 
                 if (_testLocationOKForAscent()) {
@@ -298,9 +305,24 @@ public class AdvancedLocation {
                     // compute ascent
                     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
                 	deltaAscent = Math.floor(deltaAltitude);
-                    
-                    lastGoodAscentLocation = currentLocation;
 
+                    lastGoodAscentLocation = currentLocation;
+                    if (lastGoodAscentLocation2.getAccuracy() > lastGoodAscentLocation.getAccuracy()) {
+                        Logger("Update lastGoodAscentLocation2 acc:" + lastGoodAscentLocation2.getAccuracy() +"->"+ lastGoodAscentLocation.getAccuracy(), 2);
+                        lastGoodAscentLocation2 = currentLocation;
+                    }
+                    if (lastGoodAscentLocation.getTime() - lastGoodAscentLocation2.getTime() > 60 * 10 * 1000) {
+                        Logger("lastGoodAscentLocation2 too old", 2);
+                        lastGoodAscentLocation2 = currentLocation;
+                    }
+
+                    if (deltaAscent > 0) {
+                        _ascent += deltaAscent;
+                    } else {
+                        lastGoodAscentLocation2 = currentLocation;
+                        Logger("descent, reset lastGoodAscentLocation2", 2);
+                    }
+                    
                     // try to compute ascentRate if enough time has elapsed
                     long tmpDeltaTime = currentLocation.getTime() - lastGoodAscentRateLocation.getTime();
                     
@@ -324,12 +346,8 @@ public class AdvancedLocation {
                         
                         lastGoodAscentRateLocation = currentLocation;
                     }
-                    
                 } // if (_testLocationOKForAscent()) {
 
-                if (deltaAscent > 0) {
-                    _ascent += deltaAscent;
-                }
                 
                 nbGoodLocations++;
 
@@ -348,12 +366,10 @@ public class AdvancedLocation {
                 	lastGoodAscentRateLocation = currentLocation;
                 }
 
-                Logger(currentLocation.getTime()/1000+ " deltaDistance:" + deltaDistance + " deltaTime:" + deltaTime + " deltaAscent:" + deltaAscent + " _ascent:" + _ascent);
-                Logger("_distance: " + _distance + " _averageSpeed: " + _averageSpeed + " _elapsedTime:" + _elapsedTime);
-                
+                Logger(currentLocation.getTime()/1000+ " deltaDistance:" + deltaDistance + " deltaTime:" + deltaTime + " deltaAscent:" + deltaAscent + " _ascent:" + _ascent + " _distance: " + _distance + " _averageSpeed: " + _averageSpeed + " _elapsedTime:" + _elapsedTime);
                
                 if (_testLocationOKForSave()) {
-                    Logger("Location OK to be saved");
+                    Logger("Location OK to be saved", 2);
                     returnValue = SAVED;
                     lastSavedLocation = currentLocation;
                 }
@@ -407,6 +423,13 @@ public class AdvancedLocation {
 	    } else if (Math.abs(deltaAltitude) >= 4 * worstAccuracy) {
 	    	Logger("abs(deltaAltitude):" + Math.abs(deltaAltitude) + ">=4*worstAccuracy: 4*" + worstAccuracy);
 	    	result = true;
+	    } else if (lastGoodAscentLocation2 != null) {
+	        float worstAccuracy2 = Math.max(lastGoodAscentLocation2.getAccuracy(), currentLocation.getAccuracy());
+	        double deltaAltitude2 = currentLocation.getAltitude() - lastGoodAscentLocation2.getAltitude();
+	        if (Math.abs(deltaAltitude2) >= 4 * worstAccuracy2) {
+                Logger("abs(deltaAltitude2):" + Math.abs(deltaAltitude2) + ">=4*worstAccuracy2: 4*" + worstAccuracy2);
+                result = true;
+	        }
 	    }
 	    if (result) {
 	    	Logger("alt:" + lastGoodAscentLocation.getAltitude() + "->" + currentLocation.getAltitude() + ":" + deltaAltitude + " - acc: " + worstAccuracy);

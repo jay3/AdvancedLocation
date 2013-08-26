@@ -210,8 +210,7 @@ public class AdvancedLocation {
         boolean isFirstLocation = false;
 
         nbOnLocationChanged++;
-        Logger("onLocationChanged: " +nbGoodLocations+"/"+nbOnLocationChanged+" Alt:"+ location.getAltitude() + "m-" + location.getAccuracy() + "m " + location.getLatitude() + "-" + location.getLongitude());
-
+        Logger("onLocationChanged: " +nbGoodLocations+"/"+nbOnLocationChanged+" "+(location.getTime()/1000)+","+location.getLatitude()+","+location.getLongitude()+","+location.getAltitude()+","+location.getAccuracy());
         if (lastLocation == null) {
             // save 1st location for next call to onLocationChanged()
         	lastLocation = new LocationWithExtraFields(location);

@@ -244,9 +244,6 @@ public class AdvancedLocation {
         
         deltaTime = location.getTime() - lastLocation.getTime();
         deltaDistance = location.distanceTo(lastLocation);
-        _elapsedTime += deltaTime;
-        _distance += deltaDistance;
-        _averageSpeed = (float) _distance / ((float) _elapsedTime / 1000f);
         currentLocation = new LocationWithExtraFields(location);
         
         if (currentLocation.getAccuracy() <= _minAccuracy) {
@@ -274,6 +271,9 @@ public class AdvancedLocation {
                 ||
                   (localAverageSpeed > _minSpeedToComputeStats)
             ) {
+                _elapsedTime += deltaTime;
+                _distance += deltaDistance;
+                _averageSpeed = (float) _distance / ((float) _elapsedTime / 1000f);
 
                 if (lastGoodAscentLocation == null) {
                     lastGoodAscentLocation = currentLocation;

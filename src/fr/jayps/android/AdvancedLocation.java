@@ -237,8 +237,8 @@ public class AdvancedLocation {
             }
         }
 
-        if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 1000)) {
-            // less than 1000ms, skip this location
+        if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 500)) {
+            // less than X ms, skip this location
             return SKIPPED;
         }
         

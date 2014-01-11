@@ -24,6 +24,18 @@ public class AdvancedLocation {
     protected LocationWithExtraFields lastGoodAscentRateLocation = null;  // last location with changed ascentRate
     protected LocationWithExtraFields lastSavedLocation = null;       // last saved location
     
+
+    // altitude2, a 2nd altitude, provided by a pressure sensor for example
+    protected double altitude2 = 0;
+    protected boolean hasAltitude2 = false;
+    protected long altitude2CalibrationTime = 0;
+    protected float altitude2CalibrationAccuracy = 99;
+    protected double altitude2CalibrationDelta = 0;
+    // constants used to "calibrate" altitude2
+    static final float _minAccuracyForAltitude2Calibration = 5; // in m
+    static final float _minDeltaTimeForAltitude2Calibration = 20 * 60 * 1000; // in ms
+
+
     static final float _minAccuracyIni = 10; // in m
     protected float _minAccuracy = _minAccuracyIni;   // in m
     
@@ -80,6 +92,9 @@ public class AdvancedLocation {
     
     // getters
     public double getAltitude() {
+        if (hasAltitude2 && altitude2CalibrationTime > 0) {
+            return altitude2 + altitude2CalibrationDelta;
+        }
         if (lastGoodLocation != null) {
             return lastGoodLocation.getAltitude();
         }
@@ -381,7 +396,28 @@ public class AdvancedLocation {
         
         lastLocation = currentLocation;
         
+        if (hasAltitude2) {
+            if (location.getAccuracy() < _minAccuracyForAltitude2Calibration) {
+                if ((location.getAccuracy() < altitude2CalibrationAccuracy) || (location.getTime() - altitude2CalibrationTime > _minDeltaTimeForAltitude2Calibration)) {
+                    String s = altitude2CalibrationDelta + "->";
+                    altitude2CalibrationTime = location.getTime();
+                    altitude2CalibrationAccuracy = location.getAccuracy();
+                    altitude2CalibrationDelta = location.getAltitude() - altitude2;
+
+                    s += altitude2CalibrationDelta;
+                    Logger("altitude2CalibrationDelta:" + s);
+                    Logger("delta:" + s, LoggerType.TOAST);
+                }
+            }
+        }
+
         return returnValue;
+    }
+
+    public void onAltitudeChanged(double altitude) {
+        Logger("onAltitudeChanged: " + altitude + " altitude2CalibrationTime=" + altitude2CalibrationTime + " altitude2CalibrationAccuracy=" + altitude2CalibrationAccuracy + " altitude2CalibrationDelta=" + altitude2CalibrationDelta, 2);
+        this.hasAltitude2 = true;
+        this.altitude2 = altitude;
     }
 
     private boolean _testFlatSection(LocationWithExtraFields l1, LocationWithExtraFields l2) {

@@ -203,7 +203,19 @@ public class AdvancedLocation {
 	    }            
 	    return bearingText;
 	}
-    
+    public double getLatitude() {
+        if (currentLocation != null) {
+            return currentLocation.getLatitude();
+        }
+        return 0;
+    } 
+    public double getLongitude() {
+        if (currentLocation != null) {
+            return currentLocation.getLongitude();
+        }
+        return 0;
+    }
+
     // setters
     public void setElapsedTime(long elapsedTime) {
         this._elapsedTime = elapsedTime;
@@ -397,17 +409,20 @@ public class AdvancedLocation {
         lastLocation = currentLocation;
         
         if (hasAltitude2) {
-            if (location.getAccuracy() < _minAccuracyForAltitude2Calibration) {
-                if ((location.getAccuracy() < altitude2CalibrationAccuracy) || (location.getTime() - altitude2CalibrationTime > _minDeltaTimeForAltitude2Calibration)) {
-                    String s = altitude2CalibrationDelta + "->";
-                    altitude2CalibrationTime = location.getTime();
-                    altitude2CalibrationAccuracy = location.getAccuracy();
-                    altitude2CalibrationDelta = location.getAltitude() - altitude2;
+            if (
+                    (location.getAccuracy() < altitude2CalibrationAccuracy - 0.5)
+                ||
+                    ((location.getTime() - altitude2CalibrationTime > _minDeltaTimeForAltitude2Calibration)
+                     && (location.getAccuracy() < _minAccuracyForAltitude2Calibration))
+            ) {
+                String s = altitude2CalibrationDelta + "->";
+                altitude2CalibrationTime = location.getTime();
+                altitude2CalibrationAccuracy = location.getAccuracy();
+                altitude2CalibrationDelta = location.getAltitude() - altitude2;
 
-                    s += altitude2CalibrationDelta;
-                    Logger("altitude2CalibrationDelta:" + s);
-                    Logger("delta:" + s, LoggerType.TOAST);
-                }
+                s += altitude2CalibrationDelta;
+                Logger("altitude2CalibrationDelta:" + s);
+                Logger("delta:" + s, LoggerType.TOAST);
             }
         }
 

@@ -234,6 +234,10 @@ public class AdvancedLocation {
     }
     public void setGeoidHeight(double geoidHeight) {
         this._geoidHeight = geoidHeight;
+
+        // force to recalibrate altitude2 (pressure sensor, if we got one)
+        hasAltitude2 = false;
+        altitude2CalibrationTime = 0;
     }
 
     public int onLocationChanged(Location location) {

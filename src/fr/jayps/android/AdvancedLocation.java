@@ -72,6 +72,9 @@ public class AdvancedLocation {
     
     protected float _slope = 0; // in %
     
+    // Height of geoid above WGS84 ellipsoid
+    protected double _geoidHeight = 0; // in m
+
     // debug levels
     public int debugLevel = 0;
     public int debugLevelToast = 0;
@@ -215,6 +218,9 @@ public class AdvancedLocation {
         }
         return 0;
     }
+    public double getGeoidHeight() {
+        return this._geoidHeight;
+    }
 
     // setters
     public void setElapsedTime(long elapsedTime) {
@@ -226,6 +232,9 @@ public class AdvancedLocation {
     public void setAscent(double ascent) {
         this._ascent = ascent;
     }
+    public void setGeoidHeight(double geoidHeight) {
+        this._geoidHeight = geoidHeight;
+    }
 
     public int onLocationChanged(Location location) {
     	int returnValue = NORMAL;
@@ -236,8 +245,14 @@ public class AdvancedLocation {
         float deltaAccuracy = 0;
         boolean isFirstLocation = false;
 
+        if (this._geoidHeight != 0) {
+            // we get an height of geoid (above WGS84 ellipsoid), use it to correct altitude
+            location.setAltitude(location.getAltitude() - this._geoidHeight);
+        }
+
         nbOnLocationChanged++;
-        Logger("onLocationChanged: " +nbGoodLocations+"/"+nbOnLocationChanged+" "+(location.getTime()/1000)+","+location.getLatitude()+","+location.getLongitude()+","+location.getAltitude()+","+location.getAccuracy());
+        Logger("onLocationChanged: " +nbGoodLocations+"/"+nbOnLocationChanged+" "+(location.getTime()/1000)+","+location.getLatitude()+","+location.getLongitude()+","+location.getAltitude()+"("+this._geoidHeight+"),"+location.getAccuracy());
+
         if (lastLocation == null) {
             // save 1st location for next call to onLocationChanged()
         	lastLocation = new LocationWithExtraFields(location);

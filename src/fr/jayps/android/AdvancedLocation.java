@@ -11,9 +11,33 @@ public class AdvancedLocation {
     protected class LocationWithExtraFields extends Location {
 
         public float distance = 0; // in m
+
+        // altitude2, a 2nd altitude, provided by a pressure sensor for example
+        private double _altitude2 = 0;
+        private boolean _hasAltitude2 = false;
+        private long _altitude2CalibrationTime = 0;
+        private double _altitude2CalibrationDelta = 0;
+
         public LocationWithExtraFields(Location l) {
             super(l);
             this.distance = _distance;
+            this._altitude2 = altitude2;
+            this._hasAltitude2 = hasAltitude2;
+            this._altitude2CalibrationTime = altitude2CalibrationTime;
+            this._altitude2CalibrationDelta = altitude2CalibrationDelta;
+        }
+        public double getAltitude() {
+            if (this._hasAltitude2 && this._altitude2CalibrationTime > 0) {
+                return this._altitude2 + this._altitude2CalibrationDelta;
+            }
+            return super.getAltitude();
+        }
+        public float getAltitudeAccuracy() {
+            if (this._hasAltitude2 && this._altitude2CalibrationTime > 0) {
+                // obtained from a pressure sensor, and calibration already done
+                return 1; // should be below _minAccuracyForAltitudeChangeLevel1
+            }
+            return super.getAccuracy();
         }
     }
     protected LocationWithExtraFields currentLocation = null;         // current location
@@ -43,12 +67,14 @@ public class AdvancedLocation {
     static final float _maxMinAccuracy = 50;   // in m
     
     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
-    static final float _minAccuracyForAltitudeChangeLevel1 = 3; // in m
-    static final float _minAltitudeChangeLevel1 = 10; // in m
-    static final float _minAccuracyForAltitudeChangeLevel2 = 6; // in m
-    static final float _minAltitudeChangeLevel2 = 20; // in m
-    static final float _minAccuracyForAltitudeChangeLevel3 = 12; // in m
-    static final float _minAltitudeChangeLevel3 = 50; // in m
+    static final float _minAccuracyForAltitudeChangeLevel1 = 1; // in m
+    static final float _minAltitudeChangeLevel1 = 3; // in m
+    static final float _minAccuracyForAltitudeChangeLevel2 = 3; // in m
+    static final float _minAltitudeChangeLevel2 = 10; // in m
+    static final float _minAccuracyForAltitudeChangeLevel3 = 6; // in m
+    static final float _minAltitudeChangeLevel3 = 20; // in m
+    static final float _minAccuracyForAltitudeChangeLevel4 = 12; // in m
+    static final float _minAltitudeChangeLevel4 = 50; // in m
     static final long _minDeltaTimeForAscentRate = 60 * 1000; // in ms
     static final long _maxDeltaTimeForAscentRate = 3 * 60 * 1000; // in ms
 
@@ -115,7 +141,13 @@ public class AdvancedLocation {
             return currentLocation.getAccuracy();
         }
         return 0.0f;
-    }    
+    }
+    public float getAltitudeAccuracy() {
+        if (currentLocation != null) {
+            return currentLocation.getAltitudeAccuracy();
+        }
+        return 0.0f;
+    }
     public float getSpeed() {
         if (currentLocation != null) {
             return currentLocation.getSpeed();
@@ -246,7 +278,7 @@ public class AdvancedLocation {
         float deltaDistance = 0;
         double deltaAscent = 0;
         double deltaAltitude = 0;
-        float deltaAccuracy = 0;
+        float deltaAltitudeAccuracy = 0;
         boolean isFirstLocation = false;
 
         if (this._geoidHeight != 0) {
@@ -287,7 +319,28 @@ public class AdvancedLocation {
             // less than X ms, skip this location
             return SKIPPED;
         }
-        
+
+        if (hasAltitude2) {
+            if (
+                    (location.getAccuracy() < altitude2CalibrationAccuracy - 0.5)
+                ||
+                    ((location.getTime() - altitude2CalibrationTime > _minDeltaTimeForAltitude2Calibration)
+                     && (location.getAccuracy() < _minAccuracyForAltitude2Calibration))
+            ) {
+                String s = altitude2CalibrationDelta + "->";
+                altitude2CalibrationTime = location.getTime();
+                altitude2CalibrationAccuracy = location.getAccuracy();
+                altitude2CalibrationDelta = location.getAltitude() - altitude2;
+
+                // force to restart computations based on altitude
+                lastGoodAscentLocation = null;
+
+                s += altitude2CalibrationDelta;
+                Logger("altitude2CalibrationDelta:" + s);
+                Logger("delta:" + s, LoggerType.TOAST);
+            }
+        }
+
         deltaTime = location.getTime() - lastLocation.getTime();
         deltaDistance = location.distanceTo(lastLocation);
         currentLocation = new LocationWithExtraFields(location);
@@ -328,9 +381,9 @@ public class AdvancedLocation {
                 }
                 
                 deltaAltitude = currentLocation.getAltitude() - lastGoodAscentLocation.getAltitude();
-                deltaAccuracy = currentLocation.getAccuracy() - lastGoodAscentLocation.getAccuracy();
+                deltaAltitudeAccuracy = currentLocation.getAltitudeAccuracy() - lastGoodAscentLocation.getAltitudeAccuracy();
                 
-                if (deltaAltitude < 0 && deltaAccuracy <= -3) {
+                if (deltaAltitude < 0 && deltaAltitudeAccuracy <= -3) {
                 	// Goal: during a "climb", if altitude decreases and accuracy is better, update lastGoodAscentLocation
                 	// it will avoid use of previously "wrong" (too high) lastGoodAscentLocation with lesser accuracy to compute ascent
                 	Logger("altitude decreases and accuracy is better (it decreases of at least 3m), use this position as lastGoodAscentLocation");
@@ -339,7 +392,7 @@ public class AdvancedLocation {
                 	deltaAltitude = 0;
                 }
                 
-                if (Math.abs(deltaAltitude) < 0.5 && deltaAccuracy < 0) {
+                if (Math.abs(deltaAltitude) < 0.5 && deltaAltitudeAccuracy < 0) {
                     Logger("flat section, and better accuracy, reset lastGoodAscentLocation", 2);
                     lastGoodAscentLocation = currentLocation;
                     deltaAltitude = 0;
@@ -352,8 +405,8 @@ public class AdvancedLocation {
                 	deltaAscent = Math.floor(deltaAltitude);
 
                     lastGoodAscentLocation = currentLocation;
-                    if (lastGoodAscentLocation2.getAccuracy() > lastGoodAscentLocation.getAccuracy()) {
-                        Logger("Update lastGoodAscentLocation2 acc:" + lastGoodAscentLocation2.getAccuracy() +"->"+ lastGoodAscentLocation.getAccuracy(), 2);
+                    if (lastGoodAscentLocation2.getAltitudeAccuracy() > lastGoodAscentLocation.getAltitudeAccuracy()) {
+                        Logger("Update lastGoodAscentLocation2 acc:" + lastGoodAscentLocation2.getAltitudeAccuracy() +"->"+ lastGoodAscentLocation.getAltitudeAccuracy(), 2);
                         lastGoodAscentLocation2 = currentLocation;
                     }
                     if (lastGoodAscentLocation.getTime() - lastGoodAscentLocation2.getTime() > 60 * 10 * 1000) {
@@ -404,8 +457,8 @@ public class AdvancedLocation {
                 }
                 
                 long tmpDeltaTime = currentLocation.getTime() - lastGoodAscentRateLocation.getTime();
-                if (tmpDeltaTime > _maxDeltaTimeForAscentRate && currentLocation.getAccuracy() < 10) {
-                	Logger("lastGoodAscentRateLocation too old ("+tmpDeltaTime+"s) and current accuracy ok ("+currentLocation.getAccuracy()+"m), update lastGoodAscentRateLocation");
+                if (tmpDeltaTime > _maxDeltaTimeForAscentRate && currentLocation.getAltitudeAccuracy() < 10) {
+                	Logger("lastGoodAscentRateLocation too old ("+tmpDeltaTime+"s) and current accuracy ok ("+currentLocation.getAltitudeAccuracy()+"m), update lastGoodAscentRateLocation");
                 	_slope = 0;
                 	_ascentRate = 0;
                 	lastGoodAscentRateLocation = currentLocation;
@@ -427,24 +480,6 @@ public class AdvancedLocation {
         
         lastLocation = currentLocation;
         
-        if (hasAltitude2) {
-            if (
-                    (location.getAccuracy() < altitude2CalibrationAccuracy - 0.5)
-                ||
-                    ((location.getTime() - altitude2CalibrationTime > _minDeltaTimeForAltitude2Calibration)
-                     && (location.getAccuracy() < _minAccuracyForAltitude2Calibration))
-            ) {
-                String s = altitude2CalibrationDelta + "->";
-                altitude2CalibrationTime = location.getTime();
-                altitude2CalibrationAccuracy = location.getAccuracy();
-                altitude2CalibrationDelta = location.getAltitude() - altitude2;
-
-                s += altitude2CalibrationDelta;
-                Logger("altitude2CalibrationDelta:" + s);
-                Logger("delta:" + s, LoggerType.TOAST);
-            }
-        }
-
         return returnValue;
     }
 
@@ -461,11 +496,11 @@ public class AdvancedLocation {
     	if ((deltaDistance > 500) && (100 * Math.abs(deltaAltitude) < deltaDistance)) {
     		// distance greater than 1000m and slope below 1%: this is a flat portion
     		
-    		if (l2.getAccuracy() > 5) {
-    			// if l2.getAccuracy() is bad, avoid positive result (wait a bit more for better accuracy?)
+    		if (l2.getAltitudeAccuracy() > 5) {
+    			// if l2.getAltitudeAccuracy() is bad, avoid positive result (wait a bit more for better accuracy?)
     			return false;
     		}
-    		// Note: if l1.getAccuracy() was bad, don't avoid positive result (it won't change if we wait)
+    		// Note: if l1.getAltitudeAccuracy() was bad, don't avoid positive result (it won't change if we wait)
     		
 	    	return true;
 	    }
@@ -476,9 +511,9 @@ public class AdvancedLocation {
     	if (lastGoodAscentLocation == null) {
     		return false;
     	}
-	    float worstAccuracy = Math.max(lastGoodAscentLocation.getAccuracy(), currentLocation.getAccuracy());
+	    float worstAccuracy = Math.max(lastGoodAscentLocation.getAltitudeAccuracy(), currentLocation.getAltitudeAccuracy());
 	    double deltaAltitude = currentLocation.getAltitude() - lastGoodAscentLocation.getAltitude();
-        float deltaAccuracy = currentLocation.getAccuracy() - lastGoodAscentLocation.getAccuracy();
+        float deltaAccuracy = currentLocation.getAltitudeAccuracy() - lastGoodAscentLocation.getAltitudeAccuracy();
         boolean result = false; 
 	    if ((Math.abs(deltaAltitude) >= _minAltitudeChangeLevel1) && (worstAccuracy <= _minAccuracyForAltitudeChangeLevel1)) {
 	    	Logger("abs(deltaAltitude):" + Math.abs(deltaAltitude) + ">=" + _minAltitudeChangeLevel1 + " & worstAccuracy:" + worstAccuracy + "<=" + _minAccuracyForAltitudeChangeLevel1);
@@ -489,11 +524,14 @@ public class AdvancedLocation {
 	    } else if ((Math.abs(deltaAltitude) >= _minAltitudeChangeLevel3) && (worstAccuracy <= _minAccuracyForAltitudeChangeLevel3)) {
 	    	Logger("abs(deltaAltitude):" + Math.abs(deltaAltitude) + ">=" + _minAltitudeChangeLevel3 + " & worstAccuracy:" + worstAccuracy + "<=" + _minAccuracyForAltitudeChangeLevel3);
 	    	result = true;
+        } else if ((Math.abs(deltaAltitude) >= _minAltitudeChangeLevel4) && (worstAccuracy <= _minAccuracyForAltitudeChangeLevel4)) {
+            Logger("abs(deltaAltitude):" + Math.abs(deltaAltitude) + ">=" + _minAltitudeChangeLevel4 + " & worstAccuracy:" + worstAccuracy + "<=" + _minAccuracyForAltitudeChangeLevel4);
+            result = true;
 	    } else if (Math.abs(deltaAltitude) >= 4 * worstAccuracy) {
 	    	Logger("abs(deltaAltitude):" + Math.abs(deltaAltitude) + ">=4*worstAccuracy: 4*" + worstAccuracy);
 	    	result = true;
 	    } else if (lastGoodAscentLocation2 != null) {
-	        float worstAccuracy2 = Math.max(lastGoodAscentLocation2.getAccuracy(), currentLocation.getAccuracy());
+	        float worstAccuracy2 = Math.max(lastGoodAscentLocation2.getAltitudeAccuracy(), currentLocation.getAltitudeAccuracy());
 	        double deltaAltitude2 = currentLocation.getAltitude() - lastGoodAscentLocation2.getAltitude();
 	        if (Math.abs(deltaAltitude2) >= 4 * worstAccuracy2) {
                 Logger("abs(deltaAltitude2):" + Math.abs(deltaAltitude2) + ">=4*worstAccuracy2: 4*" + worstAccuracy2);

@@ -341,11 +341,16 @@ public class AdvancedLocation {
             }
         }
 
-        deltaTime = location.getTime() - lastLocation.getTime();
-        deltaDistance = location.distanceTo(lastLocation);
         currentLocation = new LocationWithExtraFields(location);
         
         if (currentLocation.getAccuracy() <= _minAccuracy) {
+
+            if (lastGoodLocation == null) {
+                lastGoodLocation = currentLocation;
+            }
+
+            deltaTime = location.getTime() - lastGoodLocation.getTime();
+            deltaDistance = location.distanceTo(lastGoodLocation);
 
             if (currentLocation.getAccuracy() <= (_minAccuracy / 1.5f)) {
                 float _prevMinAccuracy = _minAccuracy;

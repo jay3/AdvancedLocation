@@ -400,7 +400,7 @@ public class AdvancedLocation {
                 }
             }
 
-            float localAverageSpeed = (float) deltaDistance / ((float) deltaTime / 1000f); // in m/s
+            float localAverageSpeed = deltaTime > 0 ? ((float) deltaDistance / ((float) deltaTime / 1000f)) : 0; // in m/s
 
             //Logger("localAverageSpeed:" + localAverageSpeed + " speed=" + currentLocation.getSpeed());
 
@@ -412,7 +412,7 @@ public class AdvancedLocation {
             ) {
                 _elapsedTime += deltaTime;
                 _distance += deltaDistance;
-                _averageSpeed = (float) _distance / ((float) _elapsedTime / 1000f);
+                _averageSpeed = _elapsedTime > 0 ? ((float) _distance / ((float) _elapsedTime / 1000f)) : 0;
 
                 if (lastGoodAscentLocation == null) {
                     lastGoodAscentLocation = currentLocation;
@@ -472,10 +472,10 @@ public class AdvancedLocation {
                         double tmpDeltaAscent = Math.floor(currentLocation.getAltitude() - lastGoodAscentRateLocation.getAltitude());
                         float tmpDeltaDistance = _distance - lastGoodAscentRateLocation.distance;
 
-                        _ascentRate = (float) tmpDeltaAscent / (tmpDeltaTime) * 1000; // m/s
+                        _ascentRate = tmpDeltaTime > 0 ? ((float) tmpDeltaAscent / (tmpDeltaTime) * 1000) : 0; // m/s
 
                         if (tmpDeltaDistance != 0) {
-                            _slope = (float) tmpDeltaAscent / tmpDeltaDistance; // in %
+                            _slope = tmpDeltaDistance > 0 ? ((float) tmpDeltaAscent / tmpDeltaDistance) : 0; // in %
                         } else {
                             _slope = 0;
                         }

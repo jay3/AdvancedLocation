@@ -83,6 +83,8 @@ public class AdvancedLocation {
     static final long _minDeltaTimeToSaveLocation = 3000; // in ms
     static final float _minDeltaDistanceToSaveLocation = 20;   // in m
 
+    private static final float MAX_ACCURACY_FOR_MAX_SPEED = 8; // in m
+
     // min speed to compute _elapsedTime or _ascent
     // 0.3m/s <=> 1.08km/h
     static final float _minSpeedToComputeStats = 0.3f; // in m/s
@@ -96,6 +98,7 @@ public class AdvancedLocation {
     protected long _elapsedTime = 0; // in ms
 
     protected float _averageSpeed = 0; // in m/s
+    protected float _maxSpeed = 0; // in m/s
     protected float _ascentRate = 0; // in m/s
 
     protected float _slope = 0; // in %
@@ -169,6 +172,9 @@ public class AdvancedLocation {
             _averageSpeed = (float) _distance / ((float) _elapsedTime / 1000f);
         }
         return _averageSpeed;
+    }
+    public float getMaxSpeed() {
+        return _maxSpeed;
     }
 
     public long getElapsedTime() {
@@ -306,6 +312,10 @@ public class AdvancedLocation {
         altitude2CalibrationTime = 0;
     }
 
+    public void setMaxSpeed(float maxSpeed) {
+        this._maxSpeed = maxSpeed;
+    }
+
     public int onLocationChanged(Location location) {
         int returnValue = NORMAL;
         long deltaTime = 0;
@@ -347,6 +357,9 @@ public class AdvancedLocation {
                     Logger("Accuracy to often above _minAccuracy, augment _minAccuracy to " + _minAccuracy,  LoggerType.TOAST);
                 }
             }
+        }
+        if (location.getAccuracy() < MAX_ACCURACY_FOR_MAX_SPEED) {
+            _maxSpeed = Math.max(location.getSpeed(), _maxSpeed);
         }
 
         if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 500)) {

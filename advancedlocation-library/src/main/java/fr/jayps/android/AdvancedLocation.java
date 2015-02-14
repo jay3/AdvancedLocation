@@ -103,6 +103,14 @@ public class AdvancedLocation {
 
     protected float _slope = 0; // in %
 
+    protected int _nbAscent = 0;
+    private double _nbAscentAltitudeLocalMin = 0;
+    private double _nbAscentAltitudeLocalMax = 0;
+    private boolean _nbAscentAscentInProgress = false;
+    private boolean _nbAscentDescentInProgress = false;
+    public static final float MAX_ACCURACY_FOR_NB_ASCENT = 7; // in m
+    public static final float NB_ASCENT_DELTA_ALTITUDE = 50; // in m
+
     // Height of geoid above WGS84 ellipsoid
     protected double _geoidHeight = 0; // in m
 
@@ -175,6 +183,9 @@ public class AdvancedLocation {
     }
     public float getMaxSpeed() {
         return _maxSpeed;
+    }
+    public int getNbAscent() {
+        return _nbAscent;
     }
 
     public long getElapsedTime() {
@@ -315,6 +326,12 @@ public class AdvancedLocation {
     public void setMaxSpeed(float maxSpeed) {
         this._maxSpeed = maxSpeed;
     }
+    public void setNbAscent(int nbAscent) {
+        // reset internal data
+        _nbAscentAltitudeLocalMin = _nbAscentAltitudeLocalMax = 0;
+        this._nbAscent = nbAscent;
+    }
+
 
     public int onLocationChanged(Location location) {
         int returnValue = NORMAL;
@@ -499,6 +516,32 @@ public class AdvancedLocation {
                     }
                 } // if (_testLocationOKForAscent()) {
 
+                if (currentLocation.getAccuracy() < MAX_ACCURACY_FOR_NB_ASCENT) {
+                    if (_nbAscentAltitudeLocalMin == 0 && _nbAscentAltitudeLocalMax == 0) {
+                        // first time only
+                        _nbAscentAltitudeLocalMin = _nbAscentAltitudeLocalMax = currentLocation.getAltitude();
+                        _nbAscentAscentInProgress = _nbAscentDescentInProgress = false;
+                    }
+                    _nbAscentAltitudeLocalMin = Math.min(currentLocation.getAltitude(), _nbAscentAltitudeLocalMin);
+                    _nbAscentAltitudeLocalMax = Math.max(currentLocation.getAltitude(), _nbAscentAltitudeLocalMax);
+
+                    if (!_nbAscentDescentInProgress && currentLocation.getAltitude() <= _nbAscentAltitudeLocalMax - NB_ASCENT_DELTA_ALTITUDE) {
+                        Logger("nbAscent: start new descent", 1);
+                        _nbAscentDescentInProgress = true;
+                        _nbAscentAscentInProgress = false;
+                        _nbAscentAltitudeLocalMin = currentLocation.getAltitude();
+                    }
+                    if (!_nbAscentAscentInProgress && currentLocation.getAltitude() >= _nbAscentAltitudeLocalMin + NB_ASCENT_DELTA_ALTITUDE) {
+                        Logger("nbAscent: start new ascent", 1);
+                        _nbAscentAscentInProgress = true;
+                        _nbAscentDescentInProgress = false;
+                        _nbAscentAltitudeLocalMax = currentLocation.getAltitude();
+                        _nbAscent++;
+                    }
+
+                    Logger("nbAscent: " + _nbAscentAltitudeLocalMin +"<"+_nbAscentAltitudeLocalMax + " " + currentLocation.getAltitude() + " " + (_nbAscentAscentInProgress ? "ASC" : "NOASC") + " " + (_nbAscentDescentInProgress ? "DSC" : "NODSC"), 2);
+                }
+
                 nbGoodLocations++;
 
                 if (_testFlatSection(lastGoodAscentRateLocation, currentLocation)) {
@@ -637,13 +680,13 @@ public class AdvancedLocation {
                     Toast.makeText(this._context, s, Toast.LENGTH_LONG).show();
                 }
             }
+        }
 
-            if (this.debugLevel >= level) {
+        if (this.debugLevel >= level) {
+            if (level == 2) {
                 Log.v(this.debugTagPrefix + TAG + ":" + level, s);
-            }
-        } else {
-            if (this.debugLevel >= level) {
-                Log.v(this.debugTagPrefix + TAG + ":" + level, s);
+            } else {
+                Log.d(this.debugTagPrefix + TAG + ":" + level, s);
             }
         }
     }

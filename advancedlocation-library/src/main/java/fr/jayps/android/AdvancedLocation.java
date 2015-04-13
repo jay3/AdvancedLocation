@@ -1,9 +1,15 @@
 package fr.jayps.android;
 
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.util.Log;
 import android.content.Context;
 import android.widget.Toast;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class AdvancedLocation {
     private static final String TAG = "AdvancedLocation";
@@ -80,7 +86,7 @@ public class AdvancedLocation {
     static final long _minDeltaTimeForAscentRate = 60 * 1000; // in ms
     static final long _maxDeltaTimeForAscentRate = 3 * 60 * 1000; // in ms
 
-    static final long _minDeltaTimeToSaveLocation = 3000; // in ms
+    static final long _minDeltaTimeToSaveLocation = 5000; // in ms
     static final float _minDeltaDistanceToSaveLocation = 20;   // in m
 
     private static final float MAX_ACCURACY_FOR_MAX_SPEED = 8; // in m
@@ -125,6 +131,9 @@ public class AdvancedLocation {
     public static final int SAVED = 0x2;
 
     protected Context _context = null;
+    private AdvancedLocationDbHelper dbHelper;
+    private SQLiteDatabase db;
+    private boolean _saveLocation = false;
 
     public AdvancedLocation() {
         this._context = null;
@@ -132,6 +141,8 @@ public class AdvancedLocation {
 
     public AdvancedLocation(Context context) {
         this._context = context;
+        dbHelper = AdvancedLocationDbHelper.getInstance(context);
+        db = dbHelper.getWritableDatabase();
     }
 
     // getters
@@ -331,7 +342,9 @@ public class AdvancedLocation {
         _nbAscentAltitudeLocalMin = _nbAscentAltitudeLocalMax = 0;
         this._nbAscent = nbAscent;
     }
-
+    public void setSaveLocation(boolean saveLocation) {
+        this._saveLocation = saveLocation;
+    }
 
     public int onLocationChanged(Location location) {
         int returnValue = NORMAL;
@@ -565,6 +578,9 @@ public class AdvancedLocation {
                     Logger("Location OK to be saved", 2);
                     returnValue = SAVED;
                     lastSavedLocation = currentLocation;
+                    if (_saveLocation) {
+                        _saveLocation();
+                    }
                 }
 
             } // additional conditions to compute statistics
@@ -656,6 +672,62 @@ public class AdvancedLocation {
         }
 
         return false;
+    }
+
+    private void _saveLocation() {
+        ContentValues values = new ContentValues();
+        values.put("loca_time", this.getTime());
+        values.put("loca_lat", this.getLatitude());
+        values.put("loca_lon", this.getLongitude());
+        values.put("loca_altitude", this.getAltitude());
+        values.put("loca_accuracy", this.getAccuracy());
+        //values.put("loca_comment", "");
+
+        long newRowId = db.insert(
+                AdvancedLocationDbHelper.Location.TABLE_NAME,
+                null,
+                values);
+        Logger("newRowId4:" + newRowId);
+    };
+
+    public String getGPX() {
+        String gpx = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
+                + "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" creator=\"Pebble Bike\" version=\"1.1\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n";
+
+        String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
+        Cursor cursor = db.rawQuery(selectQuery, null);
+
+        long itemId = -1;
+        if (cursor.moveToFirst()) {
+            gpx += "<trk>\n"
+                    + "<name>Track #1</name>\n"
+                    + "<trkseg>\n";
+
+            do {
+                itemId = cursor.getLong(
+                        cursor.getColumnIndexOrThrow(AdvancedLocationDbHelper.Location._ID)
+                );
+                String time = "";
+
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+                Date netDate = (new Date(Long.parseLong( cursor.getString(1))));
+                time = sdf.format(netDate);
+
+                gpx += "<trkpt lat=\"" + cursor.getString(2) + "\" lon=\"" + cursor.getString(3) + "\">\n"
+                        + "  <ele>" + cursor.getString(4) + "</ele>\n"
+                        + "  <time>" + time + "</time>\n"
+                        + "</trkpt>\n";
+            } while (cursor.moveToNext());
+            gpx += "</trkseg>\n"
+                    + "</trk>\n"
+                    + "</gpx>\n";
+        }
+        //Logger(gpx);
+        return gpx;
+    }
+    public void resetGPX() {
+        String sql = "DELETE FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME;
+        db.execSQL(sql);
     }
 
     // log functions

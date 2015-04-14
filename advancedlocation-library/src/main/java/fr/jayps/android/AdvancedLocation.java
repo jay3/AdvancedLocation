@@ -698,19 +698,32 @@ public class AdvancedLocation {
         Cursor cursor = db.rawQuery(selectQuery, null);
 
         long itemId = -1;
+        int trackNumber = 1;
         if (cursor.moveToFirst()) {
             gpx += "<trk>\n"
                     + "<name>Track #1</name>\n"
                     + "<trkseg>\n";
 
+            long prevTime = -1;
             do {
                 itemId = cursor.getLong(
                         cursor.getColumnIndexOrThrow(AdvancedLocationDbHelper.Location._ID)
                 );
                 String time = "";
 
+
+                if (prevTime > 0 && Long.parseLong(cursor.getString(1)) - prevTime > 12 * 3600 * 1000) {
+                    trackNumber++;
+                    // more than 12 hours since last point? create new track
+                    gpx += "</trkseg>\n</trk>\n<trk>\n<name>Track #" + trackNumber + "</name>\n<trkseg>\n";
+
+                } else if (prevTime > 0 && Long.parseLong(cursor.getString(1)) - prevTime > 2 * 3600 * 1000) {
+                    // more than 2 hours since last point? create new segment
+                    gpx += "</trkseg>\n<trkseg>\n";
+                }
+
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
-                Date netDate = (new Date(Long.parseLong( cursor.getString(1))));
+                Date netDate = (new Date(Long.parseLong(cursor.getString(1))));
                 time = sdf.format(netDate);
                 time = time.substring(0, time.length() - 2) + ':' + time.substring(time.length() - 2);
 
@@ -718,6 +731,7 @@ public class AdvancedLocation {
                         + "  <ele>" + cursor.getString(4) + "</ele>\n"
                         + "  <time>" + time + "</time>\n"
                         + "</trkpt>\n";
+                prevTime = Long.parseLong(cursor.getString(1));
             } while (cursor.moveToNext());
             gpx += "</trkseg>\n"
                     + "</trk>\n"

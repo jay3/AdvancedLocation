@@ -712,6 +712,7 @@ public class AdvancedLocation {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
                 Date netDate = (new Date(Long.parseLong( cursor.getString(1))));
                 time = sdf.format(netDate);
+                time = time.substring(0, time.length() - 2) + ':' + time.substring(time.length() - 2);
 
                 gpx += "<trkpt lat=\"" + cursor.getString(2) + "\" lon=\"" + cursor.getString(3) + "\">\n"
                         + "  <ele>" + cursor.getString(4) + "</ele>\n"

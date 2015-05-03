@@ -1,3 +1,4 @@
+
 package fr.jayps.android;
 
 import android.content.ContentValues;
@@ -734,9 +735,10 @@ public class AdvancedLocation {
                 prevTime = Long.parseLong(cursor.getString(1));
             } while (cursor.moveToNext());
             gpx += "</trkseg>\n"
-                    + "</trk>\n"
-                    + "</gpx>\n";
+                    + "</trk>\n";
+
         }
+        gpx += "</gpx>\n";
         //Logger(gpx);
         return gpx;
     }

@@ -39,7 +39,9 @@ public class AdvancedLocation {
             }
             return super.getAltitude();
         }
-
+        public double getAltitudeFromGps() {
+            return super.getAltitude();
+        }
         public float getAltitudeAccuracy() {
             if (this._hasAltitude2 && this._altitude2CalibrationTime > 0) {
                 // obtained from a pressure sensor, and calibration already done
@@ -157,6 +159,16 @@ public class AdvancedLocation {
         }
         return 0;
     }
+    public double getAltitudeFromGps() {
+        if (currentLocation != null) {
+            return currentLocation.getAltitudeFromGps();
+        }
+        return 0;
+    }
+    public double getAltitudeFromPressure() {
+        return altitude2;
+    }
+
 
     public double getGoodAltitude() {
         if (lastGoodAscentLocation != null) {
@@ -681,6 +693,9 @@ public class AdvancedLocation {
         values.put("loca_lat", this.getLatitude());
         values.put("loca_lon", this.getLongitude());
         values.put("loca_altitude", this.getAltitude());
+        values.put("loca_gps_altitude", this.getAltitudeFromGps());
+        values.put("loca_pressure_altitude", this.getAltitudeFromPressure());
+        values.put("loca_ascent", this.getAscent());
         values.put("loca_accuracy", this.getAccuracy());
         //values.put("loca_comment", "");
 
@@ -688,14 +703,13 @@ public class AdvancedLocation {
                 AdvancedLocationDbHelper.Location.TABLE_NAME,
                 null,
                 values);
-        Logger("newRowId4:" + newRowId);
     };
 
-    public String getGPX() {
+    public String getGPX(boolean extended) {
         String gpx = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
-                + "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" creator=\"Pebble Bike\" version=\"1.1\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n";
+                + "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" creator=\"Pebble Bike\" version=\"1.1\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\" xmlns:pb10=\"http://www.pebblebike.com/GPX/1/0/\">\n";
 
-        String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
+        String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment, loca_ascent, loca_gps_altitude, loca_pressure_altitude FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
         Cursor cursor = db.rawQuery(selectQuery, null);
 
         long itemId = -1;
@@ -730,8 +744,16 @@ public class AdvancedLocation {
 
                 gpx += "<trkpt lat=\"" + cursor.getString(2) + "\" lon=\"" + cursor.getString(3) + "\">\n"
                         + "  <ele>" + cursor.getString(4) + "</ele>\n"
-                        + "  <time>" + time + "</time>\n"
-                        + "</trkpt>\n";
+                        + "  <time>" + time + "</time>\n";
+                if (extended) {
+                    gpx += "  <extensions>\n"
+                        + "    <pb10:accuracy>" + cursor.getString(5) + "</pb10:accuracy>\n"
+                        + "    <pb10:ascent>" + cursor.getString(7) + "</pb10:ascent>\n"
+                        + "    <pb10:ele_gps>" + cursor.getString(8) + "</pb10:ele_gps>\n"
+                        + "    <pb10:ele_pressure>" + cursor.getString(9) + "</pb10:ele_pressure>\n"
+                        + "  </extensions>\n";
+                }
+                gpx += "</trkpt>\n";
                 prevTime = Long.parseLong(cursor.getString(1));
             } while (cursor.moveToNext());
             gpx += "</trkseg>\n"

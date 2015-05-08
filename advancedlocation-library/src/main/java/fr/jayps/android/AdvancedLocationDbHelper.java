@@ -10,7 +10,7 @@ public class AdvancedLocationDbHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "PB-AdvLocDbHelper";
 
-    public static final int DATABASE_VERSION = 1;
+    public static final int DATABASE_VERSION = 2;
     public static final String DATABASE_NAME = "AdvancedLocation.db";
 
     private static AdvancedLocationDbHelper sInstance;
@@ -27,6 +27,9 @@ public class AdvancedLocationDbHelper extends SQLiteOpenHelper {
                     + ", loca_lat" + TEXT_TYPE
                     + ", loca_lon" + TEXT_TYPE
                     + ", loca_altitude" + TEXT_TYPE
+                    + ", loca_gps_altitude" + TEXT_TYPE
+                    + ", loca_pressure_altitude" + TEXT_TYPE
+                    + ", loca_ascent" + TEXT_TYPE
                     + ", loca_accuracy" + TEXT_TYPE
                     + ", loca_comment" + TEXT_TYPE
             + " )";
@@ -58,8 +61,17 @@ public class AdvancedLocationDbHelper extends SQLiteOpenHelper {
         db.execSQL(SQL_CREATE_ENTRIES);
     }
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL(SQL_DELETE_ENTRIES);
-        onCreate(db);
+        if (newVersion > oldVersion) {
+            if (oldVersion < 2) {
+                SQLExec(db, "ALTER TABLE location ADD COLUMN loca_ascent TEXT");
+                SQLExec(db, "ALTER TABLE location ADD COLUMN loca_gps_altitude TEXT");
+                SQLExec(db, "ALTER TABLE location ADD COLUMN loca_pressure_altitude TEXT");
+            }
+        }
+    }
+    private void SQLExec(SQLiteDatabase db, String sql) {
+        Log.d(TAG, sql);
+        db.execSQL(sql);
     }
     public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         onUpgrade(db, oldVersion, newVersion);

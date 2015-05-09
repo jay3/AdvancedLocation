@@ -706,8 +706,10 @@ public class AdvancedLocation {
     };
 
     public String getGPX(boolean extended) {
-        String gpx = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
-                + "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" creator=\"Pebble Bike\" version=\"1.1\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\" xmlns:pb10=\"http://www.pebblebike.com/GPX/1/0/\">\n";
+        StringBuilder gpx = new StringBuilder();
+        gpx.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
+                + "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" creator=\"Pebble Bike\" version=\"1.1\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\" xmlns:pb10=\"http://www.pebblebike.com/GPX/1/0/\">\n");
+
 
         String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment, loca_ascent, loca_gps_altitude, loca_pressure_altitude FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
         Cursor cursor = db.rawQuery(selectQuery, null);
@@ -715,54 +717,55 @@ public class AdvancedLocation {
         long itemId = -1;
         int trackNumber = 1;
         if (cursor.moveToFirst()) {
-            gpx += "<trk>\n"
+            gpx.append("<trk>\n"
                     + "<name>Track #1</name>\n"
-                    + "<trkseg>\n";
+                    + "<trkseg>\n");
 
             long prevTime = -1;
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
             do {
-                itemId = cursor.getLong(
+                /*itemId = cursor.getLong(
                         cursor.getColumnIndexOrThrow(AdvancedLocationDbHelper.Location._ID)
-                );
+                );*/
                 String time = "";
 
 
                 if (prevTime > 0 && Long.parseLong(cursor.getString(1)) - prevTime > 12 * 3600 * 1000) {
                     trackNumber++;
                     // more than 12 hours since last point? create new track
-                    gpx += "</trkseg>\n</trk>\n<trk>\n<name>Track #" + trackNumber + "</name>\n<trkseg>\n";
+                    gpx.append("</trkseg>\n</trk>\n<trk>\n<name>Track #" + trackNumber + "</name>\n<trkseg>\n");
 
                 } else if (prevTime > 0 && Long.parseLong(cursor.getString(1)) - prevTime > 2 * 3600 * 1000) {
                     // more than 2 hours since last point? create new segment
-                    gpx += "</trkseg>\n<trkseg>\n";
+                    gpx.append("</trkseg>\n<trkseg>\n");
                 }
 
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
                 Date netDate = (new Date(Long.parseLong(cursor.getString(1))));
                 time = sdf.format(netDate);
                 time = time.substring(0, time.length() - 2) + ':' + time.substring(time.length() - 2);
 
-                gpx += "<trkpt lat=\"" + cursor.getString(2) + "\" lon=\"" + cursor.getString(3) + "\">\n"
+                gpx.append("<trkpt lat=\"" + cursor.getString(2) + "\" lon=\"" + cursor.getString(3) + "\">\n"
                         + "  <ele>" + cursor.getString(4) + "</ele>\n"
-                        + "  <time>" + time + "</time>\n";
+                        + "  <time>" + time + "</time>\n");
                 if (extended) {
-                    gpx += "  <extensions>\n"
+                    gpx.append("  <extensions>\n"
                         + "    <pb10:accuracy>" + cursor.getString(5) + "</pb10:accuracy>\n"
                         + "    <pb10:ascent>" + cursor.getString(7) + "</pb10:ascent>\n"
                         + "    <pb10:ele_gps>" + cursor.getString(8) + "</pb10:ele_gps>\n"
                         + "    <pb10:ele_pressure>" + cursor.getString(9) + "</pb10:ele_pressure>\n"
-                        + "  </extensions>\n";
+                        + "  </extensions>\n");
                 }
-                gpx += "</trkpt>\n";
+                gpx.append("</trkpt>\n");
                 prevTime = Long.parseLong(cursor.getString(1));
             } while (cursor.moveToNext());
-            gpx += "</trkseg>\n"
-                    + "</trk>\n";
+            gpx.append("</trkseg>\n"
+                    + "</trk>\n");
 
         }
-        gpx += "</gpx>\n";
-        //Logger(gpx);
-        return gpx;
+        gpx.append("</gpx>\n");
+        //Logger(gpx.toString());
+        return gpx.toString();
     }
     public void resetGPX() {
         String sql = "DELETE FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME;

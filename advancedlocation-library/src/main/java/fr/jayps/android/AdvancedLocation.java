@@ -89,7 +89,7 @@ public class AdvancedLocation {
     static final long _minDeltaTimeForAscentRate = 60 * 1000; // in ms
     static final long _maxDeltaTimeForAscentRate = 3 * 60 * 1000; // in ms
 
-    static final long _minDeltaTimeToSaveLocation = 5000; // in ms
+    static final long _minDeltaTimeToSaveLocation = 5 * 60 * 1000; // in ms
     static final float _minDeltaDistanceToSaveLocation = 20;   // in m
 
     private static final float MAX_ACCURACY_FOR_MAX_SPEED = 8; // in m

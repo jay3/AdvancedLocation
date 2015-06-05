@@ -10,6 +10,7 @@ import android.content.Context;
 import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 
 public class AdvancedLocation {
@@ -607,10 +608,22 @@ public class AdvancedLocation {
         return returnValue;
     }
 
+    // Array of altitude, to compute median of _ALTITUDES2_NB values
+    private static int _ALTITUDES2_NB = 5;
+    private double[] _altitudes2 = new double[_ALTITUDES2_NB];
+    private int _altitudes2_i = 0;
+
     public void onAltitudeChanged(double altitude) {
         Logger("onAltitudeChanged: " + altitude + " altitude2CalibrationTime=" + altitude2CalibrationTime + " altitude2CalibrationAccuracy=" + altitude2CalibrationAccuracy + " altitude2CalibrationDelta=" + altitude2CalibrationDelta, 2);
-        this.hasAltitude2 = true;
-        this.altitude2 = altitude;
+        _altitudes2[_altitudes2_i % _ALTITUDES2_NB] = altitude;
+        _altitudes2_i++;
+        if (_altitudes2_i > _ALTITUDES2_NB) {
+            double[] _altitudes2b = Arrays.copyOf(_altitudes2, _ALTITUDES2_NB);;
+            Arrays.sort(_altitudes2b);
+            this.hasAltitude2 = true;
+            this.altitude2 = _altitudes2b[(int) Math.floor(_ALTITUDES2_NB/2)]; // median value
+            Logger("altitude=" + altitude + " this.altitude2=" + this.altitude2, 2);
+        }
     }
 
     private boolean _testFlatSection(LocationWithExtraFields l1, LocationWithExtraFields l2) {

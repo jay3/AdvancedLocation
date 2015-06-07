@@ -10,7 +10,7 @@ public class AdvancedLocationDbHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "PB-AdvLocDbHelper";
 
-    public static final int DATABASE_VERSION = 2;
+    public static final int DATABASE_VERSION = 3;
     public static final String DATABASE_NAME = "AdvancedLocation.db";
 
     private static AdvancedLocationDbHelper sInstance;
@@ -31,6 +31,8 @@ public class AdvancedLocationDbHelper extends SQLiteOpenHelper {
                     + ", loca_pressure_altitude" + TEXT_TYPE
                     + ", loca_ascent" + TEXT_TYPE
                     + ", loca_accuracy" + TEXT_TYPE
+                    + ", loca_hr" + TEXT_TYPE
+                    + ", loca_cad" + TEXT_TYPE
                     + ", loca_comment" + TEXT_TYPE
             + " )";
 
@@ -66,6 +68,10 @@ public class AdvancedLocationDbHelper extends SQLiteOpenHelper {
                 SQLExec(db, "ALTER TABLE location ADD COLUMN loca_ascent TEXT");
                 SQLExec(db, "ALTER TABLE location ADD COLUMN loca_gps_altitude TEXT");
                 SQLExec(db, "ALTER TABLE location ADD COLUMN loca_pressure_altitude TEXT");
+            }
+            if (oldVersion < 3) {
+                SQLExec(db, "ALTER TABLE location ADD COLUMN loca_hr TEXT");
+                SQLExec(db, "ALTER TABLE location ADD COLUMN loca_cad TEXT");
             }
         }
     }

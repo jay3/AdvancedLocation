@@ -124,6 +124,9 @@ public class AdvancedLocation {
     // Height of geoid above WGS84 ellipsoid
     protected double _geoidHeight = 0; // in m
 
+    private int _hearRate = 0;
+    private int _cadence = 0;
+
     // debug levels
     public int debugLevel = 0;
     public int debugLevelToast = 0;
@@ -360,7 +363,7 @@ public class AdvancedLocation {
         this._saveLocation = saveLocation;
     }
 
-    public int onLocationChanged(Location location) {
+    public int onLocationChanged(Location location, int heartRate, int cadence) {
         int returnValue = NORMAL;
         long deltaTime = 0;
         float deltaDistance = 0;
@@ -405,6 +408,8 @@ public class AdvancedLocation {
         if (location.getAccuracy() < MAX_ACCURACY_FOR_MAX_SPEED) {
             _maxSpeed = Math.max(location.getSpeed(), _maxSpeed);
         }
+        _hearRate = heartRate;
+        _cadence = cadence;
 
         if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 500)) {
             // less than X ms, skip this location
@@ -710,6 +715,12 @@ public class AdvancedLocation {
         values.put("loca_pressure_altitude", this.getAltitudeFromPressure());
         values.put("loca_ascent", this.getAscent());
         values.put("loca_accuracy", this.getAccuracy());
+        if (_hearRate > 0) {
+            values.put("loca_hr", _hearRate);
+        }
+        if (_cadence > 0) {
+            values.put("loca_cad", _cadence);
+        }
         //values.put("loca_comment", "");
 
         long newRowId = db.insert(
@@ -724,7 +735,7 @@ public class AdvancedLocation {
                 + "<gpx xmlns=\"http://www.topografix.com/GPX/1/1\" xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" creator=\"Pebble Bike\" version=\"1.1\" xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\" xmlns:pb10=\"http://www.pebblebike.com/GPX/1/0/\">\n");
 
 
-        String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment, loca_ascent, loca_gps_altitude, loca_pressure_altitude FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
+        String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment, loca_ascent, loca_gps_altitude, loca_pressure_altitude, loca_hr, loca_cad FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
         Cursor cursor = db.rawQuery(selectQuery, null);
 
         long itemId = -1;
@@ -766,8 +777,14 @@ public class AdvancedLocation {
                         + "    <pb10:accuracy>" + cursor.getString(5) + "</pb10:accuracy>\n"
                         + "    <pb10:ascent>" + cursor.getString(7) + "</pb10:ascent>\n"
                         + "    <pb10:ele_gps>" + cursor.getString(8) + "</pb10:ele_gps>\n"
-                        + "    <pb10:ele_pressure>" + cursor.getString(9) + "</pb10:ele_pressure>\n"
-                        + "  </extensions>\n");
+                        + "    <pb10:ele_pressure>" + cursor.getString(9) + "</pb10:ele_pressure>\n");
+                    if (!cursor.isNull(10)) {
+                        gpx.append("    <pb10:hr>" + cursor.getString(10) + "</pb10:hr>\n");
+                    }
+                    if (!cursor.isNull(11)) {
+                        gpx.append("    <pb10:cad>" + cursor.getString(11) + "</pb10:cad>\n");
+                    }
+                    gpx.append("  </extensions>\n");
                 }
                 gpx.append("</trkpt>\n");
                 prevTime = Long.parseLong(cursor.getString(1));

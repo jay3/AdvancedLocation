@@ -330,6 +330,10 @@ public class AdvancedLocation {
         return this._geoidHeight;
     }
 
+    public double getAltitudeCalibrationDelta() {
+        return this.altitude2CalibrationDelta;
+    }
+
     // setters
     public void setElapsedTime(long elapsedTime) {
         this._elapsedTime = elapsedTime;
@@ -344,11 +348,24 @@ public class AdvancedLocation {
     }
 
     public void setGeoidHeight(double geoidHeight) {
-        this._geoidHeight = geoidHeight;
+        Logger("setGeoidHeight:" + geoidHeight);
 
-        // force to recalibrate altitude2 (pressure sensor, if we got one)
-        hasAltitude2 = false;
-        altitude2CalibrationTime = 0;
+        if (this._geoidHeight != geoidHeight) {
+            this._geoidHeight = geoidHeight;
+
+            // force to recalibrate altitude2 (pressure sensor, if we got one)
+            hasAltitude2 = false;
+            altitude2CalibrationTime = 0;
+        }
+    }
+
+    public void setAltitudeCalibrationDelta(double altitudeCalibrationDelta) {
+        Logger("setAltitudeCalibrationDelta:" + altitudeCalibrationDelta);
+        if (altitudeCalibrationDelta != 0 && this.altitude2CalibrationDelta != altitudeCalibrationDelta) {
+            this.altitude2CalibrationDelta = altitudeCalibrationDelta;
+            this.altitude2CalibrationAccuracy = _minAccuracyForAltitude2Calibration;
+            this.altitude2CalibrationTime = 1; // timestamp in the past
+        }
     }
 
     public void setMaxSpeed(float maxSpeed) {

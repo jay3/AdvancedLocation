@@ -126,6 +126,8 @@ public class AdvancedLocation {
 
     private int _hearRate = 0;
     private int _cadence = 0;
+    private float _sensorSpeed = 0;
+    private long _sensorSpeedTime = 0;
 
     // debug levels
     public int debugLevel = 0;
@@ -197,7 +199,15 @@ public class AdvancedLocation {
 
     public float getSpeed() {
         if (currentLocation != null) {
+            Logger("getSpeed currentLocation time:" + currentLocation.getTime() + " speed:" + currentLocation.getSpeed() + " sensor time:" + _sensorSpeedTime + " speed:" + _sensorSpeed);
+            if (_sensorSpeed != 0.0 && _sensorSpeedTime > 0 && currentLocation.getTime() < _sensorSpeedTime + 10 * 1000) {
+                // we've got a sensor speed, and no gps speed at least 10s newer
+                return _sensorSpeed;
+            }
             return currentLocation.getSpeed();
+        } else if (_sensorSpeedTime > 0) {
+            Logger("getSpeed sensor time:" + _sensorSpeedTime + " speed:" + _sensorSpeed);
+            return _sensorSpeed;
         }
         return 0.0f;
     }
@@ -646,6 +656,12 @@ public class AdvancedLocation {
             this.altitude2 = _altitudes2b[(int) Math.floor(_ALTITUDES2_NB/2)]; // median value
             Logger("altitude=" + altitude + " this.altitude2=" + this.altitude2, 2);
         }
+    }
+
+    public void setSensorSpeed(float speed, long time) {
+        this._sensorSpeed = speed;
+        this._sensorSpeedTime = time;
+        Logger("setSensorSpeed:" + _sensorSpeedTime + " speed:" + _sensorSpeed);
     }
 
     private boolean _testFlatSection(LocationWithExtraFields l1, LocationWithExtraFields l2) {

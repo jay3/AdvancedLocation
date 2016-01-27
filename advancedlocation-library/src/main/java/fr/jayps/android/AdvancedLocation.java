@@ -242,7 +242,7 @@ public class AdvancedLocation {
     }
 
     public double getAscent() {
-        return _ascent;
+        return Math.floor(_ascent);
     }
 
     public float getAscentRate() {
@@ -530,7 +530,7 @@ public class AdvancedLocation {
                 if (_testLocationOKForAscent()) {
                     // compute ascent
                     // always remember that accuracy is 3x worth on altitude than on latitude/longitude
-                    deltaAscent = Math.floor(deltaAltitude);
+                    deltaAscent = deltaAltitude;
 
                     lastGoodAscentLocation = currentLocation;
 

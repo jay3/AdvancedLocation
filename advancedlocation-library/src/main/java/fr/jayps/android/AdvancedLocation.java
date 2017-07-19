@@ -75,7 +75,7 @@ public class AdvancedLocation {
     static final float _minDeltaTimeForAltitude2Calibration = 20 * 60 * 1000; // in ms
 
 
-    static final float _minAccuracyIni = 10; // in m
+    static final float _minAccuracyIni = 20; // in m
     protected float _minAccuracy = _minAccuracyIni;   // in m
 
     // max value for _minAccuracy

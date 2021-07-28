@@ -131,6 +131,7 @@ public class AdvancedLocation {
     private int _cadence = 0;
     private float _sensorSpeed = 0;
     private long _sensorSpeedTime = 0;
+    private int _power = 0;
 
     // debug levels
     public int debugLevel = 0;
@@ -393,7 +394,7 @@ public class AdvancedLocation {
         this._saveLocation = saveLocation;
     }
 
-    public int onLocationChanged(Location location, int heartRate, int cadence) {
+    public int onLocationChanged(Location location, int heartRate, int cadence, int power) {
         int returnValue = NORMAL;
         long deltaTime = 0;
         float deltaDistance = 0;
@@ -440,6 +441,7 @@ public class AdvancedLocation {
         }
         _hearRate = heartRate;
         _cadence = cadence;
+        _power = power;
 
         if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 500)) {
             // less than X ms, skip this location
@@ -757,6 +759,9 @@ public class AdvancedLocation {
         if (_cadence > 0) {
             values.put("loca_cad", _cadence);
         }
+        if (_power > 0) {
+            values.put("loca_power",_power);
+        }
         //values.put("loca_comment", "");
 
         long newRowId = db.insert(
@@ -764,6 +769,61 @@ public class AdvancedLocation {
                 null,
                 values);
     };
+
+    public String getTCX(final String sportType) {
+        StringBuilder tcx = new StringBuilder();
+        tcx.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            + "<TrainingCenterDatabase xsi:schemaLocation=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd\" "
+            + "xmlns:ns5=\"http://www.garmin.com/xmlschemas/ActivityGoals/v1\" "
+            + "xmlns:ns3=\"http://www.garmin.com/xmlschemas/ActivityExtension/v2\" "
+            + "xmlns:ns2=\"http://www.garmin.com/xmlschemas/UserProfile/v2\" "
+            + "xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\" "
+            + "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns4=\"http://www.garmin.com/xmlschemas/ProfileExtension/v1\">\n");
+
+        String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment, loca_ascent, loca_gps_altitude, loca_pressure_altitude, loca_hr, loca_cad, loca_power FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
+        Cursor cursor = db.rawQuery(selectQuery, null);
+
+        long itemId = -1;
+        int trackNumber = 1;
+        if (cursor.moveToFirst()) {
+            String time = "";
+            Date netDate = (new Date(Long.parseLong(cursor.getString(1))));
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+            time = sdf.format(netDate);
+            time = time.substring(0, time.length() - 2) + ':' + time.substring(time.length() - 2);
+            tcx.append("<Activities>\n<Activity Sport=\""+sportType+"\">\n<Id>"+time+"</Id>\n<Lap>\n<Track>\n");
+            long prevTime = -1;
+
+            do {
+                time = "";
+                netDate = (new Date(Long.parseLong(cursor.getString(1))));
+                time = sdf.format(netDate);
+                time = time.substring(0, time.length() - 2) + ':' + time.substring(time.length() - 2);
+                tcx.append("  <Trackpoint>\n    <Time>"+time+"</Time>\n    ");
+                tcx.append("<Position>\n      <LatitudeDegrees>"+cursor.getString(2)+"</LatitudeDegrees>\n      ");
+                tcx.append("<LongitudeDegrees>"+cursor.getString(3)+"</LongitudeDegrees>\n    </Position>\n");
+                tcx.append("    <AltitudeMeters>"+cursor.getString(4)+"</AltitudeMeters>\n");
+
+                if (!cursor.isNull(10)) {
+                    //HR
+                    tcx.append("    <HeartRateBpm><Value>"+cursor.getString(10)+"</Value></HeartRateBpm>\n");
+                }
+                if (!cursor.isNull(11)) {
+                    //CAD
+                    tcx.append("    <Cadence>"+cursor.getString(11)+"</Cadence>\n");
+                }
+                if (!cursor.isNull(12)) {
+                    //POWER
+                    tcx.append("    <Extensions>\n      <ns3:TPX>\n        <ns3:Watts>"+cursor.getString(12)+"</ns3:Watts>\n      </ns3:TPX>\n    </Extensions>\n");
+                }
+                tcx.append("  </Trackpoint>\n");
+            } while (cursor.moveToNext());
+            tcx.append("</Track>\n</Lap>\n</Activity>\n</Activities>\n");
+        }
+
+        tcx.append("</TrainingCenterDatabase>");
+        return tcx.toString();
+    }
 
     public String getGPX(boolean extended) {
         StringBuilder gpx = new StringBuilder();
@@ -847,6 +907,7 @@ public class AdvancedLocation {
         //Logger(gpx.toString());
         return gpx.toString();
     }
+
     public String getRunkeeperJson(String type) {
         StringBuilder json = new StringBuilder();
         StringBuilder hr = new StringBuilder();

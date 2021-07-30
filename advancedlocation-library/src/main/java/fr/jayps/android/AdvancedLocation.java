@@ -762,6 +762,8 @@ public class AdvancedLocation {
         if (_power > 0) {
             values.put("loca_power",_power);
         }
+        values.put("loca_speed", this.getSpeed());
+        values.put("loca_distance", this.getDistance());
         //values.put("loca_comment", "");
 
         long newRowId = db.insert(
@@ -780,7 +782,7 @@ public class AdvancedLocation {
             + "xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\" "
             + "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:ns4=\"http://www.garmin.com/xmlschemas/ProfileExtension/v1\">\n");
 
-        String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment, loca_ascent, loca_gps_altitude, loca_pressure_altitude, loca_hr, loca_cad, loca_power FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
+        String selectQuery = "SELECT _ID, loca_time, loca_lat, loca_lon, loca_altitude, loca_accuracy, loca_comment, loca_ascent, loca_gps_altitude, loca_pressure_altitude, loca_hr, loca_cad, loca_power, loca_speed, loca_distance FROM " + AdvancedLocationDbHelper.Location.TABLE_NAME + " ORDER BY _ID ASC";
         Cursor cursor = db.rawQuery(selectQuery, null);
 
         long itemId = -1;
@@ -803,6 +805,7 @@ public class AdvancedLocation {
                 tcx.append("<Position>\n      <LatitudeDegrees>"+cursor.getString(2)+"</LatitudeDegrees>\n      ");
                 tcx.append("<LongitudeDegrees>"+cursor.getString(3)+"</LongitudeDegrees>\n    </Position>\n");
                 tcx.append("    <AltitudeMeters>"+cursor.getString(4)+"</AltitudeMeters>\n");
+                tcx.append("    <DistanceMeters>"+cursor.getString(14)+"</DistanceMeters>\n");
 
                 if (!cursor.isNull(10)) {
                     //HR
@@ -812,10 +815,12 @@ public class AdvancedLocation {
                     //CAD
                     tcx.append("    <Cadence>"+cursor.getString(11)+"</Cadence>\n");
                 }
+                tcx.append("    <Extensions>\n      <ns3:TPX>\n        <ns3:Speed>"+cursor.getString(13)+"</ns3:Speed>\n");
                 if (!cursor.isNull(12)) {
                     //POWER
-                    tcx.append("    <Extensions>\n      <ns3:TPX>\n        <ns3:Watts>"+cursor.getString(12)+"</ns3:Watts>\n      </ns3:TPX>\n    </Extensions>\n");
+                    tcx.append("        <ns3:Watts>"+cursor.getString(12)+"</ns3:Watts>\n");
                 }
+                tcx.append("      </ns3:TPX>\n    </Extensions>\n");
                 tcx.append("  </Trackpoint>\n");
             } while (cursor.moveToNext());
             tcx.append("</Track>\n</Lap>\n</Activity>\n</Activities>\n");

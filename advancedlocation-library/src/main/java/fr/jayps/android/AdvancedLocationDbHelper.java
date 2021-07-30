@@ -35,6 +35,8 @@ public class AdvancedLocationDbHelper extends SQLiteOpenHelper {
                     + ", loca_cad" + TEXT_TYPE
                     + ", loca_comment" + TEXT_TYPE
                     + ", loca_power" + TEXT_TYPE
+                    + ", loca_speed" + TEXT_TYPE
+                    + ", loca_distance" + TEXT_TYPE
             + " )";
 
     private static final String SQL_DELETE_ENTRIES =
@@ -74,8 +76,10 @@ public class AdvancedLocationDbHelper extends SQLiteOpenHelper {
                 SQLExec(db, "ALTER TABLE location ADD COLUMN loca_hr TEXT");
                 SQLExec(db, "ALTER TABLE location ADD COLUMN loca_cad TEXT");
             }
-            if (oldVersion < 3) {
+            if (oldVersion < 4) {
                 SQLExec(db, "ALTER TABLE location ADD COLUMN loca_power TEXT");
+                SQLExec(db, "ALTER TABLE location ADD COLUMN loca_speed TEXT");
+                SQLExec(db, "ALTER TABLE location ADD COLUMN loca_distance TEXT");
             }
         }
     }

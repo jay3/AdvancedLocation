@@ -132,6 +132,7 @@ public class AdvancedLocation {
     private float _sensorSpeed = 0;
     private long _sensorSpeedTime = 0;
     private int _power = 0;
+    private int _maxPower = 0;
 
     // debug levels
     public int debugLevel = 0;
@@ -442,6 +443,7 @@ public class AdvancedLocation {
         _hearRate = heartRate;
         _cadence = cadence;
         _power = power;
+        _maxPower = Math.max(_power, _maxPower);
 
         if ((lastGoodLocation != null) && ((location.getTime() - lastGoodLocation.getTime()) < 500)) {
             // less than X ms, skip this location
@@ -1004,5 +1006,54 @@ public class AdvancedLocation {
                 Log.d(this.debugTagPrefix + TAG + ":" + level, s);
             }
         }
+    }
+
+    public int getPower() {
+        return _power;
+    }
+
+    public int getMaxPower() {
+        return _maxPower;
+    }
+
+    public int getAvgPower(int seconds) {
+        Date date = new Date();
+        long timeMilli = date.getTime() - (seconds * 1000);
+        String time = String.format("%d",timeMilli);
+        String selectQuery = "SELECT loca_power from "+AdvancedLocationDbHelper.Location.TABLE_NAME+" WHERE loca_time >= "+time;
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        int count = 0;
+        int sum = 0;
+        double avg = 0.0;
+        if (cursor.moveToFirst()) {
+            do {
+                count++;
+                sum += Integer.parseInt(cursor.getString(1));
+            } while (cursor.moveToNext());
+            avg = sum / count;
+        }
+        Logger(String.format("avgdPower time $%d count %d",seconds, count));
+        return (int) Math.round(avg);
+    }
+
+    public int getNormalizedPower(int seconds) {
+        Date date = new Date();
+        long timeMilli = date.getTime() - (seconds * 1000);
+        String time = String.format("%d",timeMilli);
+        String selectQuery = "SELECT loca_power from "+AdvancedLocationDbHelper.Location.TABLE_NAME+" WHERE loca_time >= "+time;
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        int count = 0;
+        double sum = 0;
+        double avg = 0.0;
+        if (cursor.moveToFirst()) {
+            do {
+                count++;
+                sum += Math.pow(Integer.parseInt(cursor.getString(1)),4);
+            } while (cursor.moveToNext());
+            avg = sum / count;
+        }
+        double np = Math.pow(avg, 1.0/4);
+        Logger(String.format("NormalizedPower time $%d count %d",seconds, count));
+        return (int) Math.round(avg);
     }
 }
